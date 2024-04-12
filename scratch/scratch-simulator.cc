@@ -83,7 +83,8 @@ TraceCwnd(uint32_t nodeId, uint32_t socketId)
 void
 ChangeBottleneckBw(std::string bw)
 {
-    NS_LOG_LOGIC("Changing bottleneck bandwidth to " << bw << "bps at " << Simulator::Now().GetMilliSeconds() << "ms");
+    NS_LOG_LOGIC("Changing bottleneck bandwidth to " << bw << "bps at "
+                                                     << Simulator::Now().GetMilliSeconds() << "ms");
     Config::Set("/NodeList/2/DeviceList/1/$ns3::PointToPointNetDevice/DataRate", StringValue(bw));
     Config::Set("/NodeList/3/DeviceList/0/$ns3::PointToPointNetDevice/DataRate", StringValue(bw));
 }
@@ -119,9 +120,7 @@ main(int argc, char* argv[])
     cmd.AddValue("stopTime",
                  "Stop time for applications / simulation time will be stopTime + 1",
                  stopTime);
-    cmd.AddValue("traceFile",
-                 "File path for the bottleneck bandwidth trace",
-                 traceFile);
+    cmd.AddValue("traceFile", "File path for the bottleneck bandwidth trace", traceFile);
     cmd.Parse(argc, argv);
     NS_LOG_DEBUG("Using " << tcpTypeId << " as the transport protocol");
 
@@ -196,7 +195,8 @@ main(int argc, char* argv[])
     // Install the OnOff application on the sender
     OnOffHelper source("ns3::TcpSocketFactory", InetSocketAddress(ir1.GetAddress(1), port));
     source.SetAttribute("OnTime", StringValue("ns3::NormalRandomVariable[Mean=1|Variance=0.1]"));
-    source.SetAttribute("OffTime", StringValue("ns3::NormalRandomVariable[Mean=0.1|Variance=0.02]"));
+    source.SetAttribute("OffTime",
+                        StringValue("ns3::NormalRandomVariable[Mean=0.1|Variance=0.02]"));
     source.SetAttribute("MaxBytes", UintegerValue(0));
     source.SetAttribute("DataRate", DataRateValue(DataRate("100Mbps")));
     source.SetAttribute("PacketSize", UintegerValue(1500));
@@ -259,7 +259,9 @@ main(int argc, char* argv[])
     int t, available_bw;
     while (trace >> t >> available_bw)
     {
-        Simulator::Schedule(MilliSeconds(t - Simulator::Now().GetMilliSeconds()), &ChangeBottleneckBw, std::to_string(available_bw) + "bps");
+        Simulator::Schedule(MilliSeconds(t - Simulator::Now().GetMilliSeconds()),
+                            &ChangeBottleneckBw,
+                            std::to_string(available_bw) + "bps");
     }
 
     Simulator::Stop(stopTime + TimeStep(1));
