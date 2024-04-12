@@ -334,7 +334,8 @@ OnOffApplication::ScheduleStartEvent()
 { // Schedules the event to start sending data (switch to the "On" state)
     NS_LOG_FUNCTION(this);
 
-    Time offInterval = Seconds(m_offTime->GetValue());
+    double offVal = m_offTime->GetValue();
+    Time offInterval = offVal > 0 ? Seconds(offVal) : Seconds(0);
     NS_LOG_LOGIC("start at " << offInterval.As(Time::S));
     m_startStopEvent = Simulator::Schedule(offInterval, &OnOffApplication::StartSending, this);
 }
@@ -344,7 +345,8 @@ OnOffApplication::ScheduleStopEvent()
 { // Schedules the event to stop sending data (switch to "Off" state)
     NS_LOG_FUNCTION(this);
 
-    Time onInterval = Seconds(m_onTime->GetValue());
+    double onVal = m_onTime->GetValue();
+    Time onInterval = onVal > 0 ? Seconds(onVal) : Seconds(0);
     NS_LOG_LOGIC("stop at " << onInterval.As(Time::S));
     m_startStopEvent = Simulator::Schedule(onInterval, &OnOffApplication::StopSending, this);
 }
