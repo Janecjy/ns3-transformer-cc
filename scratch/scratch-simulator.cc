@@ -50,7 +50,7 @@ TraceThroughput(Ptr<FlowMonitor> monitor)
         prevTime = curTime;
         prev = itr->second.txBytes;
     }
-    Simulator::Schedule(Seconds(0.2), &TraceThroughput, monitor);
+    Simulator::Schedule(Seconds(0.02), &TraceThroughput, monitor);
 }
 
 // Check the queue size
@@ -83,6 +83,7 @@ TraceCwnd(uint32_t nodeId, uint32_t socketId)
 void
 ChangeBottleneckBw(std::string bw)
 {
+    NS_LOG_LOGIC("Changing bottleneck bandwidth to " << bw << "bps at " << Simulator::Now().GetMilliSeconds() << "ms");
     Config::Set("/NodeList/2/DeviceList/1/$ns3::PointToPointNetDevice/DataRate", StringValue(bw));
     Config::Set("/NodeList/3/DeviceList/0/$ns3::PointToPointNetDevice/DataRate", StringValue(bw));
 }
@@ -92,6 +93,7 @@ main(int argc, char* argv[])
 {
     NS_LOG_UNCOND("Scratch Simulator for transformer-cc");
     LogComponentEnable("ScratchSimulator", LOG_LEVEL_DEBUG);
+    // LogComponentEnable("OnOffApplication", LOG_LEVEL_LOGIC);
 
     // Naming the output directory using local system time
     time_t rawtime;
@@ -153,7 +155,7 @@ main(int argc, char* argv[])
 
     PointToPointHelper edgeLink;
     edgeLink.SetDeviceAttribute("DataRate", StringValue("1000Mbps"));
-    edgeLink.SetChannelAttribute("Delay", StringValue("5ms"));
+    edgeLink.SetChannelAttribute("Delay", StringValue("0ms"));
 
     // Create NetDevice containers
     NetDeviceContainer senderEdge = edgeLink.Install(sender.Get(0), routers.Get(0));
@@ -191,9 +193,13 @@ main(int argc, char* argv[])
     // Select sender side port
     uint16_t port = 50001;
 
-    // Install application on the sender
-    BulkSendHelper source("ns3::TcpSocketFactory", InetSocketAddress(ir1.GetAddress(1), port));
+    // Install the OnOff application on the sender
+    OnOffHelper source("ns3::TcpSocketFactory", InetSocketAddress(ir1.GetAddress(1), port));
+    source.SetAttribute("OnTime", StringValue("ns3::NormalRandomVariable[Mean=1|Variance=0.1]"));
+    source.SetAttribute("OffTime", StringValue("ns3::NormalRandomVariable[Mean=0.1|Variance=0.02]"));
     source.SetAttribute("MaxBytes", UintegerValue(0));
+    source.SetAttribute("DataRate", DataRateValue(DataRate("100Mbps")));
+    source.SetAttribute("PacketSize", UintegerValue(1500));
     ApplicationContainer sourceApps = source.Install(sender.Get(0));
     sourceApps.Start(Seconds(0.1));
     // Hook trace source after application starts
@@ -253,8 +259,7 @@ main(int argc, char* argv[])
     int t, available_bw;
     while (trace >> t >> available_bw)
     {
-        Simulator::Schedule(MilliSeconds(t), &ChangeBottleneckBw, std::to_string(available_bw) + "bps");
-    
+        Simulator::Schedule(MilliSeconds(t - Simulator::Now().GetMilliSeconds()), &ChangeBottleneckBw, std::to_string(available_bw) + "bps");
     }
 
     Simulator::Stop(stopTime + TimeStep(1));
