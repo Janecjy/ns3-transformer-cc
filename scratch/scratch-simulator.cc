@@ -44,7 +44,7 @@ TraceThroughput(Ptr<FlowMonitor> monitor)
     {
         auto itr = stats.begin();
         Time curTime = Now();
-        throughput << curTime << " "
+        throughput << Simulator::Now().GetSeconds() << " "
                    << 8 * (itr->second.txBytes - prev) / ((curTime - prevTime).ToDouble(Time::US))
                    << std::endl;
         prevTime = curTime;
@@ -80,6 +80,13 @@ TraceCwnd(uint32_t nodeId, uint32_t socketId)
                                   MakeBoundCallback(&CwndTracer, stream));
 }
 
+void
+ChangeBottleneckBw(std::string bw)
+{
+    Config::Set("/NodeList/2/DeviceList/1/$ns3::PointToPointNetDevice/DataRate", StringValue(bw));
+    Config::Set("/NodeList/3/DeviceList/0/$ns3::PointToPointNetDevice/DataRate", StringValue(bw));
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -98,6 +105,7 @@ main(int argc, char* argv[])
     std::string tcpTypeId = "TcpBbr";
     std::string queueDisc = "FifoQueueDisc";
     Time stopTime = Seconds(100);
+    std::string traceFile = "/mydata/ns3-traces/test.log";
 
     CommandLine cmd(__FILE__);
     cmd.AddValue("tcpTypeId",
@@ -109,6 +117,9 @@ main(int argc, char* argv[])
     cmd.AddValue("stopTime",
                  "Stop time for applications / simulation time will be stopTime + 1",
                  stopTime);
+    cmd.AddValue("traceFile",
+                 "File path for the bottleneck bandwidth trace",
+                 traceFile);
     cmd.Parse(argc, argv);
     NS_LOG_DEBUG("Using " << tcpTypeId << " as the transport protocol");
 
@@ -132,6 +143,8 @@ main(int argc, char* argv[])
     sender.Create(1);
     receiver.Create(1);
     routers.Create(2);
+    NS_LOG_DEBUG("router 0 id: " << routers.Get(0)->GetId());
+    NS_LOG_DEBUG("router 1 id: " << routers.Get(1)->GetId());
 
     // Create the point-to-point link helpers
     PointToPointHelper bottleneckLink;
@@ -215,10 +228,34 @@ main(int argc, char* argv[])
     NS_ASSERT_MSG(throughput.is_open(), "Throughput file was not opened correctly");
     NS_ASSERT_MSG(queueSize.is_open(), "Queue size file was not opened correctly");
 
+    /*Config::MatchContainer match = Config::LookupMatches("/NodeList/3/DeviceList/");
+    if (match.GetN() != 0)
+    {
+        for (uint32_t i = 0; i < match.GetN(); i++)
+        {
+            Ptr<Object> n = match.Get(i);
+            NS_LOG_DEBUG("Device " << i << " id: " <<
+    n->GetObject<PointToPointNetDevice>()->GetNode()->GetId()); NS_LOG_DEBUG("Device " << i << "
+    data rate: " << n->GetObject<PointToPointNetDevice>()->m_bps);
+        }
+    }
+    else
+    {
+        NS_FATAL_ERROR("Lookup got no matches");
+    }*/
+
     // Check for dropped packets using Flow Monitor
     FlowMonitorHelper flowmon;
     Ptr<FlowMonitor> monitor = flowmon.InstallAll();
     Simulator::Schedule(Seconds(0 + 0.000001), &TraceThroughput, monitor);
+
+    std::ifstream trace(traceFile);
+    int t, available_bw;
+    while (trace >> t >> available_bw)
+    {
+        Simulator::Schedule(MilliSeconds(t), &ChangeBottleneckBw, std::to_string(available_bw) + "bps");
+    
+    }
 
     Simulator::Stop(stopTime + TimeStep(1));
     Simulator::Run();
