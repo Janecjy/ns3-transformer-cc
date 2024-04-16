@@ -27,8 +27,10 @@ using namespace ns3;
 using namespace ns3::SystemPath;
 
 std::string dir;
+float tputMeasureInterval = 0.02;
 std::ofstream throughput;
 std::ofstream queueSize;
+std::ofstream lost;
 
 uint32_t prev = 0;
 Time prevTime = Seconds(0);
@@ -47,10 +49,11 @@ TraceThroughput(Ptr<FlowMonitor> monitor)
         throughput << Simulator::Now().GetSeconds() << " "
                    << 8 * (itr->second.txBytes - prev) / ((curTime - prevTime).ToDouble(Time::US))
                    << std::endl;
+        lost << Simulator::Now().GetSeconds() << " " << itr->second.lostPackets << std::endl;
         prevTime = curTime;
         prev = itr->second.txBytes;
     }
-    Simulator::Schedule(Seconds(0.02), &TraceThroughput, monitor);
+    Simulator::Schedule(Seconds(tputMeasureInterval), &TraceThroughput, monitor);
 }
 
 // Check the queue size
@@ -80,13 +83,29 @@ TraceCwnd(uint32_t nodeId, uint32_t socketId)
                                   MakeBoundCallback(&CwndTracer, stream));
 }
 
+/**
+ * Trace queue drop.
+ *
+ * \param ofStream Output filestream.
+ * \param item The dropped QueueDiscItem.
+ */
+void
+TraceQueueDrop(std::ofstream* ofStream, Ptr<const QueueDiscItem> item)
+{
+    *ofStream << Simulator::Now().GetSeconds() << " " << std::hex << item->Hash() << std::endl;
+}
+
 void
 ChangeBottleneckBw(std::string bw)
 {
-    NS_LOG_LOGIC("Changing bottleneck bandwidth to " << bw << "bps at "
+    NS_LOG_LOGIC("Changing bottleneck bandwidth to " << bw << " at "
                                                      << Simulator::Now().GetMilliSeconds() << "ms");
     Config::Set("/NodeList/2/DeviceList/1/$ns3::PointToPointNetDevice/DataRate", StringValue(bw));
     Config::Set("/NodeList/3/DeviceList/0/$ns3::PointToPointNetDevice/DataRate", StringValue(bw));
+    // uint32_t sndBufSize = stoi(bw)*0.01/8;
+    // NS_LOG_DEBUG("Setting sndBufSize to " << sndBufSize);
+    // Config::Set("/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/SndBufSize",
+    // UintegerValue(sndBufSize));
 }
 
 int
@@ -94,7 +113,11 @@ main(int argc, char* argv[])
 {
     NS_LOG_UNCOND("Scratch Simulator for transformer-cc");
     LogComponentEnable("ScratchSimulator", LOG_LEVEL_DEBUG);
+//    LogComponentEnable("BulkSendApplication", LOG_LEVEL_LOGIC);
     // LogComponentEnable("OnOffApplication", LOG_LEVEL_LOGIC);
+    // LogComponentEnable("TcpSocketBase", LOG_LEVEL_DEBUG);
+    // LogComponentEnable("TcpCubic", LOG_LEVEL_DEBUG);
+    // LogComponentEnable("Ipv4FlowProbe", LOG_LEVEL_DEBUG);
 
     // Naming the output directory using local system time
     time_t rawtime;
@@ -108,7 +131,8 @@ main(int argc, char* argv[])
     std::string tcpTypeId = "TcpBbr";
     std::string queueDisc = "FifoQueueDisc";
     Time stopTime = Seconds(100);
-    std::string traceFile = "/mydata/ns3-traces/test.log";
+    std::string oneWayDelay = "10ms";
+    std::string traceFile = "/mydata/ns3-traces/test-1.log";
 
     CommandLine cmd(__FILE__);
     cmd.AddValue("tcpTypeId",
@@ -120,6 +144,12 @@ main(int argc, char* argv[])
     cmd.AddValue("stopTime",
                  "Stop time for applications / simulation time will be stopTime + 1",
                  stopTime);
+    cmd.AddValue("oneWayDelay",
+                 "One way delay of the bottleneck link with units (e.g., 10ms)",
+                 oneWayDelay);
+    cmd.AddValue("tputMeasureInterval",
+                 "Measurement interval for throughput measurement",
+                 tputMeasureInterval);
     cmd.AddValue("traceFile", "File path for the bottleneck bandwidth trace", traceFile);
     cmd.Parse(argc, argv);
     NS_LOG_DEBUG("Using " << tcpTypeId << " as the transport protocol");
@@ -131,12 +161,14 @@ main(int argc, char* argv[])
     // The maximum send buffer size is set to 4194304 bytes (4MB) and the
     // maximum receive buffer size is set to 6291456 bytes (6MB) in the Linux
     // kernel. The same buffer sizes are used as default in this example.
-    Config::SetDefault("ns3::TcpSocket::SndBufSize", UintegerValue(4194304));
-    Config::SetDefault("ns3::TcpSocket::RcvBufSize", UintegerValue(6291456));
+    Config::SetDefault("ns3::TcpSocket::SndBufSize", UintegerValue(41943040));
+    Config::SetDefault("ns3::TcpSocket::RcvBufSize", UintegerValue(62914560));
     Config::SetDefault("ns3::TcpSocket::InitialCwnd", UintegerValue(10));
     Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue(1448));
     Config::SetDefault("ns3::DropTailQueue<Packet>::MaxSize", QueueSizeValue(QueueSize("1p")));
-    Config::SetDefault(queueDisc + "::MaxSize", QueueSizeValue(QueueSize("100p")));
+    Config::SetDefault(queueDisc + "::MaxSize", QueueSizeValue(QueueSize("800p")));
+    Config::SetDefault("ns3::TcpSocketBase::UseEcn", StringValue("On"));
+    // Config::SetDefault(queueDisc + "::UseEcn", BooleanValue(true));
 
     NodeContainer sender;
     NodeContainer receiver;
@@ -150,7 +182,7 @@ main(int argc, char* argv[])
     // Create the point-to-point link helpers
     PointToPointHelper bottleneckLink;
     bottleneckLink.SetDeviceAttribute("DataRate", StringValue("10Mbps"));
-    bottleneckLink.SetChannelAttribute("Delay", StringValue("10ms"));
+    bottleneckLink.SetChannelAttribute("Delay", StringValue(oneWayDelay));
 
     PointToPointHelper edgeLink;
     edgeLink.SetDeviceAttribute("DataRate", StringValue("1000Mbps"));
@@ -171,8 +203,8 @@ main(int argc, char* argv[])
     TrafficControlHelper tch;
     tch.SetRootQueueDisc(queueDisc);
 
-    tch.Install(senderEdge);
-    tch.Install(receiverEdge);
+    // tch.Install(senderEdge);
+    // tch.Install(receiverEdge);
 
     // Assign IP addresses
     Ipv4AddressHelper ipv4;
@@ -193,13 +225,16 @@ main(int argc, char* argv[])
     uint16_t port = 50001;
 
     // Install the OnOff application on the sender
+    // BulkSendHelper source("ns3::TcpSocketFactory", InetSocketAddress(ir1.GetAddress(1), port));
     OnOffHelper source("ns3::TcpSocketFactory", InetSocketAddress(ir1.GetAddress(1), port));
     source.SetAttribute("OnTime", StringValue("ns3::NormalRandomVariable[Mean=1|Variance=0.1]"));
-    source.SetAttribute("OffTime",
-                        StringValue("ns3::NormalRandomVariable[Mean=0.1|Variance=0.02]"));
+    // source.SetAttribute("OffTime",
+    // StringValue("ns3::NormalRandomVariable[Mean=0.2|Variance=0.05]"));
+    source.SetAttribute("OffTime", StringValue("ns3::ConstantRandomVariable[Constant=0.0]"));
+    // source.SetAttribute("SendSize", UintegerValue(25));
     source.SetAttribute("MaxBytes", UintegerValue(0));
-    source.SetAttribute("DataRate", DataRateValue(DataRate("100Mbps")));
-    source.SetAttribute("PacketSize", UintegerValue(1500));
+    source.SetAttribute("DataRate", DataRateValue(DataRate("150Mbps")));
+    source.SetAttribute("PacketSize", UintegerValue(1448));
     ApplicationContainer sourceApps = source.Install(sender.Get(0));
     sourceApps.Start(Seconds(0.1));
     // Hook trace source after application starts
@@ -220,19 +255,26 @@ main(int argc, char* argv[])
     std::filesystem::copy("BBR-Validation/ns-3 scripts/PlotScripts/gnuplotScriptCwnd", dir);
     std::filesystem::copy("BBR-Validation/ns-3 scripts/PlotScripts/gnuplotScriptThroughput", dir);
     std::filesystem::copy("BBR-Validation/ns-3 scripts/PlotScripts/gnuplotScriptQueueSize", dir);
+    std::filesystem::copy("BBR-Validation/ns-3 scripts/PlotScripts/gnuplotScriptLost", dir);
 
     // Trace the queue occupancy on the second interface of R1
     tch.Uninstall(routers.Get(0)->GetDevice(1));
     QueueDiscContainer qd;
     qd = tch.Install(routers.Get(0)->GetDevice(1));
+    std::ofstream queueDropOfStream;
+    queueDropOfStream.open(dir + "/queueDrop.dat", std::ofstream::out);
+    qd.Get(0)->TraceConnectWithoutContext("Drop",
+                                          MakeBoundCallback(&TraceQueueDrop, &queueDropOfStream));
     Simulator::ScheduleNow(&CheckQueueSize, qd.Get(0));
 
     // Open files for writing throughput traces and queue size
     throughput.open(dir + "/throughput.dat", std::ios::out);
     queueSize.open(dir + "/queueSize.dat", std::ios::out);
+    lost.open(dir + "/lost.dat", std::ios::out);
 
     NS_ASSERT_MSG(throughput.is_open(), "Throughput file was not opened correctly");
     NS_ASSERT_MSG(queueSize.is_open(), "Queue size file was not opened correctly");
+    NS_ASSERT_MSG(lost.is_open(), "Lost packets file was not opened correctly");
 
     /*Config::MatchContainer match = Config::LookupMatches("/NodeList/3/DeviceList/");
     if (match.GetN() != 0)
@@ -253,7 +295,11 @@ main(int argc, char* argv[])
     // Check for dropped packets using Flow Monitor
     FlowMonitorHelper flowmon;
     Ptr<FlowMonitor> monitor = flowmon.InstallAll();
+    // Ptr<FlowMonitor> monitor = flowmon.Install(routers);
     Simulator::Schedule(Seconds(0 + 0.000001), &TraceThroughput, monitor);
+
+    flowmon.SerializeToXmlFile(dir + "/flowmon.xml", true, true);
+    // Simulator::Schedule(Seconds(0 + 0.000001), &TraceDrop, monitor);
 
     std::ifstream trace(traceFile);
     int t, available_bw;
@@ -270,6 +316,7 @@ main(int argc, char* argv[])
 
     throughput.close();
     queueSize.close();
+    lost.close();
 
     return 0;
 }
