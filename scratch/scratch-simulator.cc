@@ -27,34 +27,79 @@ using namespace ns3;
 using namespace ns3::SystemPath;
 
 std::string dir;
-float tputMeasureInterval = 0.02;
+float measureInterval = 0.02;
+uint32_t packetSize = 1448.0;
 std::ofstream throughput;
 std::ofstream queueSize;
 std::ofstream lost;
+std::ofstream new_throughput;
+std::ofstream output;
 static std::map<uint32_t, Ptr<OutputStreamWrapper>> inFlightStream; //!< In flight output stream.
 
 uint32_t prev = 0;
 Time prevTime = Seconds(0);
+uint32_t currentCwnd = 0;
+uint32_t g_firstBytesReceived = 0; //!< First received packet size.
+double pacingRate = 0;
+std::vector<uint64_t> delay;
 
 NS_LOG_COMPONENT_DEFINE("ScratchSimulator");
 
-// Calculate throughput
-static void
-TraceThroughput(Ptr<FlowMonitor> monitor)
+void
+OutputStats()
 {
-    FlowMonitor::FlowStatsContainer stats = monitor->GetFlowStats();
-    if (!stats.empty())
-    {
-        auto itr = stats.begin();
-        Time curTime = Now();
-        throughput << Simulator::Now().GetSeconds() << " "
-                   << 8 * (itr->second.txBytes - prev) / ((curTime - prevTime).ToDouble(Time::US))
-                   << std::endl;
-        lost << Simulator::Now().GetSeconds() << " " << itr->second.lostPackets << std::endl;
-        prevTime = curTime;
-        prev = itr->second.txBytes;
-    }
-    Simulator::Schedule(Seconds(tputMeasureInterval), &TraceThroughput, monitor);
+    double throughput = g_firstBytesReceived * 8 / measureInterval / 1e6;
+    double avg_delay = accumulate(delay.begin(), delay.end(), 0.0) / delay.size();
+    output << Simulator::Now().GetSeconds() << ", " << currentCwnd << ", " << throughput << ", "
+           << pacingRate << ", " << avg_delay << std::endl;
+    g_firstBytesReceived = 0;
+    delay.clear();
+    Simulator::Schedule(Seconds(measureInterval), &OutputStats);
+}
+
+/**
+ * Trace receiver Rx bytes.
+ *
+ * \param packet The packet.
+ * \param address The sender address.
+ */
+static void
+RecvTputTracer(Ptr<const Packet> packet, const Address& address)
+{
+    g_firstBytesReceived += packet->GetSize();
+}
+
+// Trace congestion window
+static void
+CwndTracer(uint32_t oldval, uint32_t newval)
+{
+    currentCwnd = newval / packetSize;
+}
+
+static void
+PacingRateTracer(DataRate oldValue, DataRate newValue)
+{
+    pacingRate = newValue.GetBitRate() / 1e6;
+}
+
+static void
+RttTracer(Time oldValue, Time newValue)
+{
+    delay.push_back(newValue.GetMilliSeconds());
+}
+
+void
+ConnectTracer()
+{
+    Config::ConnectWithoutContextFailSafe(
+        "/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/CongestionWindow",
+        MakeBoundCallback(&CwndTracer));
+    Config::ConnectWithoutContextFailSafe("/NodeList/1/ApplicationList/*/$ns3::PacketSink/Rx",
+                                          MakeCallback(&RecvTputTracer));
+    Config::ConnectWithoutContextFailSafe("/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/PacingRate",
+                                          MakeCallback(&PacingRateTracer));
+    Config::ConnectWithoutContextFailSafe("/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/RTT",
+                                          MakeCallback(&RttTracer));
 }
 
 // Check the queue size
@@ -64,24 +109,6 @@ CheckQueueSize(Ptr<QueueDisc> qd)
     uint32_t qsize = qd->GetCurrentSize().GetValue();
     Simulator::Schedule(Seconds(0.2), &CheckQueueSize, qd);
     queueSize << Simulator::Now().GetSeconds() << " " << qsize << std::endl;
-}
-
-// Trace congestion window
-static void
-CwndTracer(Ptr<OutputStreamWrapper> stream, uint32_t oldval, uint32_t newval)
-{
-    *stream->GetStream() << Simulator::Now().GetSeconds() << " " << newval / 1448.0 << std::endl;
-}
-
-void
-TraceCwnd(uint32_t nodeId, uint32_t socketId)
-{
-    AsciiTraceHelper ascii;
-    Ptr<OutputStreamWrapper> stream = ascii.CreateFileStream(dir + "/cwnd.dat");
-    Config::ConnectWithoutContext("/NodeList/" + std::to_string(nodeId) +
-                                      "/$ns3::TcpL4Protocol/SocketList/" +
-                                      std::to_string(socketId) + "/CongestionWindow",
-                                  MakeBoundCallback(&CwndTracer, stream));
 }
 
 /**
@@ -96,51 +123,51 @@ TraceQueueDrop(std::ofstream* ofStream, Ptr<const QueueDiscItem> item)
     *ofStream << Simulator::Now().GetSeconds() << " " << std::hex << item->Hash() << std::endl;
 }
 
-/**
- * Get the Node Id From Context.
- *
- * \param context The context.
- * \return the node ID.
- */
-static uint32_t
-GetNodeIdFromContext(std::string context)
-{
-    const std::size_t n1 = context.find_first_of('/', 1);
-    const std::size_t n2 = context.find_first_of('/', n1 + 1);
-    return std::stoul(context.substr(n1 + 1, n2 - n1 - 1));
-}
+// /**
+//  * Get the Node Id From Context.
+//  *
+//  * \param context The context.
+//  * \return the node ID.
+//  */
+// static uint32_t
+// GetNodeIdFromContext(std::string context)
+// {
+//     const std::size_t n1 = context.find_first_of('/', 1);
+//     const std::size_t n2 = context.find_first_of('/', n1 + 1);
+//     return std::stoul(context.substr(n1 + 1, n2 - n1 - 1));
+// }
 
-/**
- * In-flight tracer.
- *
- * \param context The context.
- * \param old Old value.
- * \param inFlight In flight value.
- */
-static void
-InFlightTracer(std::string context, uint32_t old [[maybe_unused]], uint32_t inFlight)
-{
-    uint32_t nodeId = GetNodeIdFromContext(context);
+// /**
+//  * In-flight tracer.
+//  *
+//  * \param context The context.
+//  * \param old Old value.
+//  * \param inFlight In flight value.
+//  */
+// static void
+// InFlightTracer(std::string context, uint32_t old [[maybe_unused]], uint32_t inFlight)
+// {
+//     uint32_t nodeId = GetNodeIdFromContext(context);
 
-    *inFlightStream[nodeId]->GetStream()
-        << Simulator::Now().GetSeconds() << " " << inFlight << std::endl;
-}
+//     *inFlightStream[nodeId]->GetStream()
+//         << Simulator::Now().GetSeconds() << " " << inFlight << std::endl;
+// }
 
-/**
- * In flight trace connection.
- *
- * \param in_flight_file_name In flight trace file name.
- * \param nodeId Node ID.
- */
-static void
-TraceInFlight(std::string& in_flight_file_name, uint32_t nodeId)
-{
-    AsciiTraceHelper ascii;
-    inFlightStream[nodeId] = ascii.CreateFileStream(in_flight_file_name);
-    Config::Connect("/NodeList/" + std::to_string(nodeId) +
-                        "/$ns3::TcpL4Protocol/SocketList/0/BytesInFlight",
-                    MakeCallback(&InFlightTracer));
-}
+// /**
+//  * In flight trace connection.
+//  *
+//  * \param in_flight_file_name In flight trace file name.
+//  * \param nodeId Node ID.
+//  */
+// static void
+// TraceInFlight(std::string& in_flight_file_name, uint32_t nodeId)
+// {
+//     AsciiTraceHelper ascii;
+//     inFlightStream[nodeId] = ascii.CreateFileStream(in_flight_file_name);
+//     Config::Connect("/NodeList/" + std::to_string(nodeId) +
+//                         "/$ns3::TcpL4Protocol/SocketList/0/BytesInFlight",
+//                     MakeCallback(&InFlightTracer));
+// }
 
 void
 ChangeBottleneckBw(std::string bw)
@@ -149,10 +176,6 @@ ChangeBottleneckBw(std::string bw)
                                                      << Simulator::Now().GetMilliSeconds() << "ms");
     Config::Set("/NodeList/2/DeviceList/1/$ns3::PointToPointNetDevice/DataRate", StringValue(bw));
     Config::Set("/NodeList/3/DeviceList/0/$ns3::PointToPointNetDevice/DataRate", StringValue(bw));
-    // uint32_t sndBufSize = stoi(bw)*0.01/8;
-    // NS_LOG_DEBUG("Setting sndBufSize to " << sndBufSize);
-    // Config::Set("/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/SndBufSize",
-    // UintegerValue(sndBufSize));
 }
 
 int
@@ -178,11 +201,14 @@ main(int argc, char* argv[])
 
     std::string tcpTypeId = "TcpBbr";
     std::string queueType = "FqCoDelQueueDisc";
+    std::string onTimeMean = "1";
+    std::string onTimeVar = "0.1";
+    std::string offTimeMean = "0.2";
+    std::string offTimeVar = "0.05";
     Time stopTime = Seconds(100);
     std::string oneWayDelay = "10ms";
     bool queueUseEcn = false;
     Time ceThreshold = MilliSeconds(1);
-    bool enablePcap = false;
     std::string traceFile = "/mydata/ns3-traces/test-1.log";
 
     CommandLine cmd(__FILE__);
@@ -195,16 +221,20 @@ main(int argc, char* argv[])
     cmd.AddValue("stopTime",
                  "Stop time for applications / simulation time will be stopTime + 1",
                  stopTime);
+    cmd.AddValue("onTimeMean", "Mean on time for OnOff application in seconds", onTimeMean);
+    cmd.AddValue("onTimeVar", "Variance of on time for OnOff application in seconds", onTimeVar);
+    cmd.AddValue("offTimeMean", "Mean off time for OnOff application in seconds", offTimeMean);
+    cmd.AddValue("offTimeVar", "Variance of off time for OnOff application in seconds", offTimeVar);
     cmd.AddValue("oneWayDelay",
                  "One way delay of the bottleneck link with units (e.g., 10ms)",
                  oneWayDelay);
     cmd.AddValue("ceThreshold", "CoDel CE threshold (for DCTCP)", ceThreshold);
-    cmd.AddValue("tputMeasureInterval",
-                 "Measurement interval for throughput measurement",
-                 tputMeasureInterval);
+    cmd.AddValue("packetSize", "Packet size in bytes (default 1448)", packetSize);
+    cmd.AddValue("measureInterval",
+                 "Measurement interval for output stats in seconds (default 0.02)",
+                 measureInterval);
     cmd.AddValue("traceFile", "File path for the bottleneck bandwidth trace", traceFile);
     cmd.AddValue("queueUseEcn", "use ECN on queue", queueUseEcn);
-    cmd.AddValue("enablePcap", "enable Pcap", enablePcap);
     cmd.Parse(argc, argv);
     NS_LOG_DEBUG("Using " << tcpTypeId << " as the transport protocol");
 
@@ -218,7 +248,7 @@ main(int argc, char* argv[])
     Config::SetDefault("ns3::TcpSocket::SndBufSize", UintegerValue(41943040));
     Config::SetDefault("ns3::TcpSocket::RcvBufSize", UintegerValue(62914560));
     Config::SetDefault("ns3::TcpSocket::InitialCwnd", UintegerValue(10));
-    Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue(1448));
+    Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue(packetSize));
 
     if (tcpTypeId == "TcpDctcp")
     {
@@ -228,7 +258,8 @@ main(int argc, char* argv[])
             NS_LOG_WARN("Warning: using DCTCP with queue ECN disabled");
         }
     }
-    if (queueUseEcn) {
+    if (queueUseEcn)
+    {
         Config::SetDefault(queueType + "::UseEcn", BooleanValue(true));
     }
     // Enable TCP to use ECN regardless
@@ -236,7 +267,6 @@ main(int argc, char* argv[])
 
     Config::SetDefault("ns3::DropTailQueue<Packet>::MaxSize", QueueSizeValue(QueueSize("100p")));
     Config::SetDefault(queueType + "::MaxSize", QueueSizeValue(QueueSize("700p")));
-    Config::SetDefault(queueType + "::Target", StringValue("10ms"));
 
     NodeContainer sender;
     NodeContainer receiver;
@@ -298,22 +328,23 @@ main(int argc, char* argv[])
     // Install the OnOff application on the sender
     // BulkSendHelper source("ns3::TcpSocketFactory", InetSocketAddress(ir1.GetAddress(1), port));
     OnOffHelper source("ns3::TcpSocketFactory", InetSocketAddress(ir1.GetAddress(1), port));
-    source.SetAttribute("OnTime", StringValue("ns3::NormalRandomVariable[Mean=100|Variance=0.1]"));
-    // source.SetAttribute("OffTime",
-    // StringValue("ns3::NormalRandomVariable[Mean=0.2|Variance=0.05]"));
-    source.SetAttribute("OffTime", StringValue("ns3::ConstantRandomVariable[Constant=0.0]"));
-    // source.SetAttribute("SendSize", UintegerValue(25));
+    source.SetAttribute("OnTime",
+                        StringValue("ns3::NormalRandomVariable[Mean=" + onTimeMean +
+                                    "|Variance=" + onTimeVar + "]"));
+    source.SetAttribute("OffTime",
+                        StringValue("ns3::NormalRandomVariable[Mean=" + offTimeMean +
+                                    "|Variance=" + offTimeVar + "]"));
     source.SetAttribute("MaxBytes", UintegerValue(0));
-    source.SetAttribute("DataRate", DataRateValue(DataRate("150Mb/s")));
+    source.SetAttribute("DataRate", DataRateValue(DataRate("100Mb/s")));
     source.SetAttribute("PacketSize", UintegerValue(1448));
     ApplicationContainer sourceApps = source.Install(sender.Get(0));
     sourceApps.Start(Seconds(0.1));
     // Hook trace source after application starts
-    Simulator::Schedule(Seconds(0.1) + MilliSeconds(1), &TraceCwnd, 0, 0);
-    Simulator::Schedule(Seconds(0.1) + MilliSeconds(1),
-                        &TraceInFlight,
-                        dir + "sender-inflight.dat",
-                        0);
+    Simulator::Schedule(Seconds(0.1) + MilliSeconds(1), &ConnectTracer);
+    // Simulator::Schedule(Seconds(0.1) + MilliSeconds(1),
+    //                     &TraceInFlight,
+    //                     dir + "sender-inflight.dat",
+    //                     0);
     // Simulator::Schedule(Seconds(0.1) + MilliSeconds(1), &TraceInFlight, dir +
     // "router-inflight.dat", 2);
     sourceApps.Stop(stopTime);
@@ -324,12 +355,13 @@ main(int argc, char* argv[])
     sinkApps.Start(Seconds(0.0));
     sinkApps.Stop(stopTime);
 
-    std::filesystem::copy("BBR-Validation/ns-3 scripts/PlotScripts/gnuplotScriptCwnd", dir);
-    std::filesystem::copy("BBR-Validation/ns-3 scripts/PlotScripts/gnuplotScriptThroughput", dir);
-    std::filesystem::copy("BBR-Validation/ns-3 scripts/PlotScripts/gnuplotScriptQueueSize", dir);
-    std::filesystem::copy("BBR-Validation/ns-3 scripts/PlotScripts/gnuplotScriptLost", dir);
-    std::filesystem::copy("BBR-Validation/ns-3 scripts/PlotScripts/gnuplotScriptInflightSender",
-                          dir);
+    // std::filesystem::copy("BBR-Validation/ns-3 scripts/PlotScripts/gnuplotScriptCwnd", dir);
+    // std::filesystem::copy("BBR-Validation/ns-3 scripts/PlotScripts/gnuplotScriptThroughput",
+    // dir); std::filesystem::copy("BBR-Validation/ns-3 scripts/PlotScripts/gnuplotScriptQueueSize",
+    // dir); std::filesystem::copy("BBR-Validation/ns-3 scripts/PlotScripts/gnuplotScriptLost",
+    // dir); std::filesystem::copy("BBR-Validation/ns-3
+    // scripts/PlotScripts/gnuplotScriptInflightSender",
+    //                       dir);
 
     // Trace the queue occupancy on the second interface of R1
     tch.Uninstall(routers.Get(0)->GetDevice(1));
@@ -342,11 +374,13 @@ main(int argc, char* argv[])
     Simulator::ScheduleNow(&CheckQueueSize, qd.Get(0));
 
     // Open files for writing throughput traces and queue size
-    throughput.open(dir + "/throughput.dat", std::ios::out);
+    // throughput.open(dir + "/throughput.dat", std::ios::out);
+    // new_throughput.open(dir + "/new_throughput.dat", std::ios::out);
     queueSize.open(dir + "/queueSize.dat", std::ios::out);
     lost.open(dir + "/lost.dat", std::ios::out);
+    output.open(dir + "/output.dat", std::ios::out);
 
-    NS_ASSERT_MSG(throughput.is_open(), "Throughput file was not opened correctly");
+    // NS_ASSERT_MSG(throughput.is_open(), "Throughput file was not opened correctly");
     NS_ASSERT_MSG(queueSize.is_open(), "Queue size file was not opened correctly");
     NS_ASSERT_MSG(lost.is_open(), "Lost packets file was not opened correctly");
 
@@ -370,7 +404,14 @@ main(int argc, char* argv[])
     FlowMonitorHelper flowmon;
     Ptr<FlowMonitor> monitor = flowmon.InstallAll();
     // Ptr<FlowMonitor> monitor = flowmon.Install(routers);
-    Simulator::Schedule(Seconds(0 + 0.000001), &TraceThroughput, monitor);
+
+    // Simulator::Schedule(Seconds(0 + 0.000001), &TraceThroughput, monitor);
+    // Simulator::Schedule(Seconds(measureInterval), &ScheduleFirstPacketSinkConnection);
+    Simulator::Schedule(Seconds(measureInterval), &OutputStats);
+    // Simulator::Schedule(Seconds(measureInterval),
+    //                     &TraceFirstThroughput,
+    //                     &new_throughput,
+    //                     Seconds(measureInterval));
 
     flowmon.SerializeToXmlFile(dir + "/flowmon.xml", true, true);
     // Simulator::Schedule(Seconds(0 + 0.000001), &TraceDrop, monitor);
@@ -388,7 +429,9 @@ main(int argc, char* argv[])
     Simulator::Run();
     Simulator::Destroy();
 
-    throughput.close();
+    // throughput.close();
+    // new_throughput.close();
+    output.close();
     queueSize.close();
     lost.close();
 
