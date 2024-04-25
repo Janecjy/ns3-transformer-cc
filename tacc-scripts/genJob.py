@@ -27,7 +27,7 @@ for om in on_mean:
                     for t in types:
                         for trace in traces:
                             # get line number of the trace file
-                            with open(trace_dir+trace) as f:
+                            with open(trace) as f:
                                 for i, l in enumerate(f):
                                     pass
                                 trace_line_num = i + 1
