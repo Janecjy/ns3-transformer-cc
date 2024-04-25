@@ -15,9 +15,9 @@ for file in os.listdir(trace_dir):
         traces.append(trace_dir+file)
         
 on_mean = ["0.1", "0.5", "1", "2", "5", "7", "10"]
-on_var = ["0.01", "0.05", "0.1", "0.2", "0.5", "0.8", "1"]
-off_mean = ["0.02", "0.1", "0.2", "0.5", "0.8", "1", "1.5", "2"]
-off_var = ["0.005", "0.01", "0.05", "0.1", "0.5", "1"]
+on_var = ["0.01", "0.1", "0.5", "1"]
+off_mean = ["0.02", "0.1", "0.5", "1", "1.5", "2"]
+off_var = ["0.005", "0.05", "0.1", "1"]
 
 for test in range(10):
     for om in on_mean:
@@ -33,5 +33,5 @@ for test in range(10):
                         for i in range(0, int(trace_line_num/10)):
                             #get a random number between 0 and line_num - 10
                             start_line = random.randint(0, trace_line_num-10)
-                            cmd = '/home1/09498/janechen/ns3-transformer-cc/ns3 run "/home1/09498/janechen/ns3-transformer-cc/scratch/scratch-simulator --tcpTypeId='+type+' --stopTime=10 --traceFile='+trace+' --outputDir='+output_dir+' --onTimeMean='+om+' --onTimeVar='+ov+' --offTimeMean='+ofm+' --offTimeVar='+ofv+' --startLine='+str(start_line)+'"'
+                            cmd = '/home1/09498/janechen/ns3-transformer-cc/ns3 run "scratch/scratch-simulator --tcpTypeId='+type+' --stopTime=10 --traceFile='+trace+' --outputDir='+output_dir+' --onTimeMean='+om+' --onTimeVar='+ov+' --offTimeMean='+ofm+' --offTimeVar='+ofv+' --startLine='+str(start_line)+'"'
                             print(cmd)
