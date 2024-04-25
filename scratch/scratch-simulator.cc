@@ -188,8 +188,8 @@ ChangeBottleneckBw(std::string bw)
 int
 main(int argc, char* argv[])
 {
-    NS_LOG_UNCOND("Scratch Simulator for transformer-cc");
-    LogComponentEnable("ScratchSimulator", LOG_LEVEL_DEBUG);
+    // NS_LOG_UNCOND("Scratch Simulator for transformer-cc");
+    // LogComponentEnable("ScratchSimulator", LOG_LEVEL_DEBUG);
     // LogComponentEnable("BulkSendApplication", LOG_LEVEL_LOGIC);
     // LogComponentEnable("OnOffApplication", LOG_LEVEL_DEBUG);
     // LogComponentEnable("TcpSocketBase", LOG_LEVEL_DEBUG);
