@@ -218,6 +218,7 @@ main(int argc, char* argv[])
     Time ceThreshold = MilliSeconds(1);
     std::string traceFile = "/mydata/ns3-traces/test-1.log";
     std::string outputDir = "/mydata/output-traces/";
+    int startLine = 0;
 
     CommandLine cmd(__FILE__);
     cmd.AddValue("tcpTypeId",
@@ -244,6 +245,7 @@ main(int argc, char* argv[])
     cmd.AddValue("traceFile", "File path for the bottleneck bandwidth trace", traceFile);
     cmd.AddValue("outputDir", "output directory path", outputDir);
     cmd.AddValue("queueUseEcn", "use ECN on queue", queueUseEcn);
+    cmd.AddValue("startLine", "start line of the trace file", startLine);
     cmd.Parse(argc, argv);
     NS_LOG_DEBUG("Using " << tcpTypeId << " as the transport protocol");
 
@@ -385,9 +387,18 @@ main(int argc, char* argv[])
     NS_LOG_DEBUG("traceFile: " << traceFile);
     std::ifstream trace(traceFile);
     int t, available_bw;
+    trace.seekg(std::ios::beg);
+    for(int i=0; i < startLine - 1; ++i){
+        trace.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
+    }
+    int start_t = -1;
     while (trace >> t >> available_bw)
     {
-        Simulator::Schedule(MilliSeconds(t - Simulator::Now().GetMilliSeconds()),
+        if (start_t == -1)
+        {
+            start_t = t;
+        }
+        Simulator::Schedule(MilliSeconds(t - start_t - Simulator::Now().GetMilliSeconds()),
                             &ChangeBottleneckBw,
                             std::to_string(available_bw) + "bps");
     }
