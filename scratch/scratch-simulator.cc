@@ -333,7 +333,7 @@ main(int argc, char* argv[])
 
     std::string inputName = traceFile;
     inputName.erase(0, 1);
-    for (int i = 0; i < 2; ++i) {
+    for (int i = 0; i < 4; ++i) {
         inputName.erase(0, inputName.find("/") + 1);
     }
     NS_LOG_DEBUG("inputName: " << inputName);
