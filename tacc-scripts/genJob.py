@@ -14,24 +14,18 @@ for file in os.listdir(trace_dir):
     if file.endswith(".log"):
         traces.append(trace_dir+file)
         
-on_mean = ["0.1", "1", "5", "10"]
-on_var = ["0.1", "1"]
-off_mean = ["0.02", "0.5", "1"]
-off_var = ["0.005", "0.1"]
+on_off_config = [["0.1", "0.05", "0.02", "0.01"], ["1", "0.1", "0.5", "0.1"], ["1", "0.1", "0.2", "0.05"], ["1", "0.5", "0.2", "0.05"], ["1", "0.5", "0.2", "0.05"], ["2", "0.5", "0.2", "0.1"]]
 
-for om in on_mean:
-    for ov in on_var:
-        for ofm in off_mean:
-            for ofv in off_var:
-                for trace in traces:
-                    # get line number of the trace file
-                    with open(trace) as f:
-                        for i, l in enumerate(f):
-                            pass
-                        trace_line_num = i + 1
-                    for i in range(0, int(trace_line_num/10)):
-                        #get a random number between 0 and line_num - 10
-                        start_line = random.randint(0, trace_line_num-10)
-                        cmd = '/home1/09498/janechen/ns3-transformer-cc/ns3 run "scratch/scratch-simulator --tcpTypeId='+type+' --stopTime=10 --traceFile='+trace+' --outputDir='+output_dir+' --onTimeMean='+om+' --onTimeVar='+ov+' --offTimeMean='+ofm+' --offTimeVar='+ofv+' --startLine='+str(start_line)+'" &'
-                        print(cmd)
-print("wait")
+for config in on_off_config:
+    for om, ov, ofm, ofv in config:
+        for trace in traces:
+            # get line number of the trace file
+            with open(trace) as f:
+                for i, l in enumerate(f):
+                    pass
+                trace_line_num = i + 1
+            for i in range(0, int(trace_line_num/10)):
+                #get a random number between 0 and line_num - 10
+                start_line = random.randint(0, trace_line_num-10)
+                cmd = '/home1/09498/janechen/ns3-transformer-cc/ns3 run "scratch/scratch-simulator --tcpTypeId='+type+' --stopTime=10 --traceFile='+trace+' --outputDir='+output_dir+' --onTimeMean='+om+' --onTimeVar='+ov+' --offTimeMean='+ofm+' --offTimeVar='+ofv+' --startLine='+str(start_line)+'"'
+                print(cmd)

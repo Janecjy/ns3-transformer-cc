@@ -338,7 +338,7 @@ main(int argc, char* argv[])
     }
     NS_LOG_DEBUG("inputName: " << inputName);
     name = tcpTypeId + '-' + onTimeMean + '-' + onTimeVar + '-' + offTimeMean + '-' + offTimeVar +
-           '-' + currentTime + '-' + inputName;
+           '-' + currentTime + '-' + std::to_string(startLine) + '-' + inputName;
 
     // Install the OnOff application on the sender
     OnOffHelper source("ns3::TcpSocketFactory", InetSocketAddress(ir1.GetAddress(1), port));
