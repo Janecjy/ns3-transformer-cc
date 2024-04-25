@@ -15,9 +15,9 @@ for file in os.listdir(trace_dir):
         traces.append(trace_dir+file)
         
 on_mean = ["0.1", "1", "5", "10"]
-on_var = ["0.01", "0.1", "1"]
-off_mean = ["0.02", "0.5", "2"]
-off_var = ["0.005", "0.05", "0.1"]
+on_var = ["0.1", "1"]
+off_mean = ["0.02", "0.5", "1"]
+off_var = ["0.005", "0.1"]
 
 for om in on_mean:
     for ov in on_var:
