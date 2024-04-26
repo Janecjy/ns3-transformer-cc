@@ -27,7 +27,7 @@ for config in on_off_config:
             for i, l in enumerate(f):
                 pass
             trace_line_num = i + 1
-        for i in range(0, int(trace_line_num)):
+        for i in range(0, int(trace_line_num/10)):
             #get a random number between 0 and line_num - 10
             start_line = random.randint(0, trace_line_num-10)
             cmd = '/home1/09498/janechen/ns3-transformer-cc/ns3 run "scratch/scratch-simulator --tcpTypeId='+type+' --stopTime=10 --traceFile='+trace+' --outputDir='+output_dir+' --onTimeMean='+om+' --onTimeVar='+ov+' --offTimeMean='+ofm+' --offTimeVar='+ofv+' --startLine='+str(start_line)+'"'
