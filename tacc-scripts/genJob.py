@@ -7,6 +7,11 @@ import random
 trace_dir = sys.argv[1]
 output_dir = sys.argv[2]
 type = sys.argv[3]
+additional_args = ""
+
+if len(sys.argv) > 4:
+    additional_args = ' '.join(sys.argv[4:])
+    type += ' ' + additional_args
 
 # for all traces in the directory, add to list
 traces = []
