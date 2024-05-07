@@ -220,6 +220,12 @@ main(int argc, char* argv[])
     std::string outputDir = "/mydata/output-traces/";
     int startLine = 0;
 
+    // Cubic parameters
+    double beta = 0.7;
+    double cubicC = 0.4;
+
+    // NewReno parameters
+
     CommandLine cmd(__FILE__);
     cmd.AddValue("tcpTypeId",
                  "Transport protocol to use: TcpLinuxReno, TcpVegas, TcpDctcp, TcpCubic, TcpBbr",
@@ -246,6 +252,8 @@ main(int argc, char* argv[])
     cmd.AddValue("outputDir", "output directory path", outputDir);
     cmd.AddValue("queueUseEcn", "use ECN on queue", queueUseEcn);
     cmd.AddValue("startLine", "start line of the trace file", startLine);
+    cmd.AddValue("beta", "Cubic beta parameter for multiplicative decrease", beta);
+    cmd.AddValue("cubicC", "Cubic scaling factor", cubicC);
     cmd.Parse(argc, argv);
     NS_LOG_DEBUG("Using " << tcpTypeId << " as the transport protocol");
 
@@ -260,6 +268,8 @@ main(int argc, char* argv[])
     Config::SetDefault("ns3::TcpSocket::RcvBufSize", UintegerValue(6291456));
     Config::SetDefault("ns3::TcpSocket::InitialCwnd", UintegerValue(10));
     Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue(packetSize));
+    Config::SetDefault("ns3::TcpCubic::Beta", DoubleValue(beta));
+    Config::SetDefault("ns3::TcpCubic::C", DoubleValue(cubicC));
 
     if (tcpTypeId == "TcpDctcp")
     {
@@ -333,12 +343,20 @@ main(int argc, char* argv[])
 
     std::string inputName = traceFile;
     inputName.erase(0, 1);
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 4; ++i)
+    {
         inputName.erase(0, inputName.find("/") + 1);
     }
     NS_LOG_DEBUG("inputName: " << inputName);
-    name = tcpTypeId + '-' + onTimeMean + '-' + onTimeVar + '-' + offTimeMean + '-' + offTimeVar +
-           '-' + currentTime + '-' + std::to_string(startLine) + '-' + inputName;
+    if (tcpTypeId == "TcpCubic")
+    {
+        name = tcpTypeId + '-' + std::to_string(beta) + '-' + std::to_string(cubicC) + '-' +
+               onTimeMean + '-' + onTimeVar + '-' + offTimeMean + '-' + offTimeVar + '-' +
+               currentTime + '-' + std::to_string(startLine) + '-' + inputName;
+    }
+    else
+        name = tcpTypeId + '-' + onTimeMean + '-' + onTimeVar + '-' + offTimeMean + '-' +
+               offTimeVar + '-' + currentTime + '-' + std::to_string(startLine) + '-' + inputName;
 
     // Install the OnOff application on the sender
     OnOffHelper source("ns3::TcpSocketFactory", InetSocketAddress(ir1.GetAddress(1), port));
@@ -376,7 +394,7 @@ main(int argc, char* argv[])
 
     // Open files for writing outputs
     MakeDirectories(outputDir);
-    output.open(outputDir+name, std::ios::out);
+    output.open(outputDir + name, std::ios::out);
 
     output << "Time, currentCwnd, ssThres, throughput, pacingRate, avgDelay, rto, dropObserved, "
               "markObserved, "
@@ -388,8 +406,9 @@ main(int argc, char* argv[])
     std::ifstream trace(traceFile);
     int t, available_bw;
     trace.seekg(std::ios::beg);
-    for(int i=0; i < startLine - 1; ++i){
-        trace.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
+    for (int i = 0; i < startLine - 1; ++i)
+    {
+        trace.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     }
     int start_t = -1;
     while (trace >> t >> available_bw)
