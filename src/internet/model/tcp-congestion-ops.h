@@ -236,6 +236,10 @@ class TcpNewReno : public TcpCongestionOps
   protected:
     virtual uint32_t SlowStart(Ptr<TcpSocketState> tcb, uint32_t segmentsAcked);
     virtual void CongestionAvoidance(Ptr<TcpSocketState> tcb, uint32_t segmentsAcked);
+
+  private:
+  double m_alpha; //!< Alpha for NewReno additive increase
+  uint32_t m_beta; //!< Beta for NewReno multiplicative decrease
 };
 
 } // namespace ns3

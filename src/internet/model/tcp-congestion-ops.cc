@@ -97,7 +97,17 @@ TcpNewReno::GetTypeId()
     static TypeId tid = TypeId("ns3::TcpNewReno")
                             .SetParent<TcpCongestionOps>()
                             .SetGroupName("Internet")
-                            .AddConstructor<TcpNewReno>();
+                            .AddConstructor<TcpNewReno>()
+                            .AddAttribute("RenoAlpha",
+                                          "Scale factor for NewReno Cwnd Increase",
+                                          DoubleValue(1),
+                                          MakeDoubleAccessor(&TcpNewReno::m_alpha),
+                                          MakeDoubleChecker<double>())
+                            .AddAttribute("RenoBeta",
+                                          "Scale factor for NewReno SsThresh calculation",
+                                          UintegerValue(2),
+                                          MakeUintegerAccessor(&TcpNewReno::m_beta),
+                                          MakeUintegerChecker<uint32_t>());
     return tid;
 }
 
@@ -166,7 +176,7 @@ TcpNewReno::SlowStart(Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
 
     if (segmentsAcked >= 1)
     {
-        tcb->m_cWnd += tcb->m_segmentSize;
+        tcb->m_cWnd += m_alpha * tcb->m_segmentSize;
         NS_LOG_INFO("In SlowStart, updated to cwnd " << tcb->m_cWnd << " ssthresh "
                                                      << tcb->m_ssThresh);
         return segmentsAcked - 1;
@@ -194,7 +204,7 @@ TcpNewReno::CongestionAvoidance(Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
         double adder =
             static_cast<double>(tcb->m_segmentSize * tcb->m_segmentSize) / tcb->m_cWnd.Get();
         adder = std::max(1.0, adder);
-        tcb->m_cWnd += static_cast<uint32_t>(adder);
+        tcb->m_cWnd += m_alpha * static_cast<uint32_t>(adder);
         NS_LOG_INFO("In CongAvoid, updated to cwnd " << tcb->m_cWnd << " ssthresh "
                                                      << tcb->m_ssThresh);
     }
@@ -245,7 +255,7 @@ TcpNewReno::GetSsThresh(Ptr<const TcpSocketState> state, uint32_t bytesInFlight)
 {
     NS_LOG_FUNCTION(this << state << bytesInFlight);
 
-    return std::max(2 * state->m_segmentSize, bytesInFlight / 2);
+    return std::max(2 * state->m_segmentSize, bytesInFlight / m_beta);
 }
 
 Ptr<TcpCongestionOps>

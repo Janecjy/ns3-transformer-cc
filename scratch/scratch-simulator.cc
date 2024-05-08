@@ -196,6 +196,7 @@ main(int argc, char* argv[])
     // LogComponentEnable("TcpCubic", LOG_LEVEL_DEBUG);
     // LogComponentEnable("Ipv4FlowProbe", LOG_LEVEL_DEBUG);
     // LogComponentEnable("TcpDctcp", LOG_LEVEL_INFO);
+    // LogComponentEnable("TcpCongestionOps", LOG_LEVEL_FUNCTION);
 
     // Naming the output directory using local system time
     time_t rawtime;
@@ -225,6 +226,8 @@ main(int argc, char* argv[])
     double cubicC = 0.4;
 
     // NewReno parameters
+    double alpha = 1;
+    uint32_t renoBeta = 2;
 
     CommandLine cmd(__FILE__);
     cmd.AddValue("tcpTypeId",
@@ -254,6 +257,8 @@ main(int argc, char* argv[])
     cmd.AddValue("startLine", "start line of the trace file", startLine);
     cmd.AddValue("beta", "Cubic beta parameter for multiplicative decrease", beta);
     cmd.AddValue("cubicC", "Cubic scaling factor", cubicC);
+    cmd.AddValue("alpha", "NewReno alpha parameter for additive increase", alpha);
+    cmd.AddValue("renoBeta", "NewReno beta parameter for multiplicative decrease", renoBeta);
     cmd.Parse(argc, argv);
     NS_LOG_DEBUG("Using " << tcpTypeId << " as the transport protocol");
 
@@ -270,6 +275,8 @@ main(int argc, char* argv[])
     Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue(packetSize));
     Config::SetDefault("ns3::TcpCubic::Beta", DoubleValue(beta));
     Config::SetDefault("ns3::TcpCubic::C", DoubleValue(cubicC));
+    Config::SetDefault("ns3::TcpNewReno::RenoAlpha", DoubleValue(alpha));
+    Config::SetDefault("ns3::TcpNewReno::RenoBeta", UintegerValue(renoBeta));
 
     if (tcpTypeId == "TcpDctcp")
     {
@@ -351,6 +358,10 @@ main(int argc, char* argv[])
     if (tcpTypeId == "TcpCubic")
     {
         name = tcpTypeId + '-' + std::to_string(beta) + '-' + std::to_string(cubicC) + '-' +
+               onTimeMean + '-' + onTimeVar + '-' + offTimeMean + '-' + offTimeVar + '-' +
+               currentTime + '-' + std::to_string(startLine) + '-' + inputName;
+    } else if (tcpTypeId == "TcpNewReno") {
+        name = tcpTypeId + '-' + std::to_string(alpha) + '-' + std::to_string(renoBeta) + '-' +
                onTimeMean + '-' + onTimeVar + '-' + offTimeMean + '-' + offTimeVar + '-' +
                currentTime + '-' + std::to_string(startLine) + '-' + inputName;
     }
