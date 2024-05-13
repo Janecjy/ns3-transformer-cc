@@ -220,6 +220,7 @@ main(int argc, char* argv[])
     std::string traceFile = "/mydata/ns3-traces/test-1.log";
     std::string outputDir = "/mydata/output-traces/";
     int startLine = 0;
+    uint32_t runNum = 0;
 
     // Cubic parameters
     double beta = 0.7;
@@ -259,9 +260,11 @@ main(int argc, char* argv[])
     cmd.AddValue("cubicC", "Cubic scaling factor", cubicC);
     cmd.AddValue("alpha", "NewReno alpha parameter for additive increase", alpha);
     cmd.AddValue("renoBeta", "NewReno beta parameter for multiplicative decrease", renoBeta);
+    cmd.AddValue("runNum", "Run number for randomness seed", runNum);
     cmd.Parse(argc, argv);
     NS_LOG_DEBUG("Using " << tcpTypeId << " as the transport protocol");
 
+    ns3::RngSeedManager::SetRun(runNum);
     queueType = std::string("ns3::") + queueType;
 
     Config::SetDefault("ns3::TcpL4Protocol::SocketType", StringValue("ns3::" + tcpTypeId));
