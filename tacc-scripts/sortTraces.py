@@ -35,5 +35,6 @@ for file_name in os.listdir(os.path.join(parent_path, dir)):
     # print(output_path)
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-    shutil.copyfile(file_path, os.path.join(output_dir, file_name))
+    if not os.path.exists(os.path.join(output_dir, file_name)):
+        shutil.copyfile(file_path, os.path.join(output_dir, file_name))
     # break
