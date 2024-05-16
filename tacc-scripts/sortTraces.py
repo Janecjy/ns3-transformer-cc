@@ -34,4 +34,4 @@ for dir in old_dir_name_list:
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
         shutil.copyfile(file_path, os.path.join(output_dir, file_name))
-        break
+        # break
