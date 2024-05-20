@@ -372,7 +372,7 @@ main(int argc, char* argv[])
                currentTime + '-' + std::to_string(startLine) + '-' + inputName;
         if (isSecondPolicy)
         {
-            name = tcpTypeId + '-' + std::to_string(beta) + '-' + std::to_string(cubicC) + '-' + std::to_string(initialCwnd) + std::to_string(runNum);
+            name = tcpTypeId + '-' + std::to_string(beta) + '-' + std::to_string(cubicC) + '-' + std::to_string(initialCwnd) + '-' + std::to_string(runNum);
         }
     } else if (tcpTypeId == "TcpNewReno") {
         name = tcpTypeId + '-' + std::to_string(alpha) + '-' + std::to_string(renoBeta) + '-' +
@@ -380,7 +380,7 @@ main(int argc, char* argv[])
                currentTime + '-' + std::to_string(startLine) + '-' + inputName;
         if (isSecondPolicy)
         {
-            name = tcpTypeId + '-' + std::to_string(alpha) + '-' + std::to_string(renoBeta) + '-' + std::to_string(initialCwnd) + std::to_string(runNum);
+            name = tcpTypeId + '-' + std::to_string(alpha) + '-' + std::to_string(renoBeta) + '-' + std::to_string(initialCwnd) + '-' + std::to_string(runNum);
         }
     }
     else
