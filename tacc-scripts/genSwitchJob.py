@@ -22,7 +22,8 @@ def main():
         print("max_jobs=48; cur_jobs=0")
         for root, dirs, files in os.walk(trace_dir):
             for i in range(file_limit):
-                file = random.choice(files)
+                file_count = len(files)
+                file = files[random.randint(0, file_count-1)]
                 print("((cur_jobs >= max_jobs)) && wait -n")
                 cmd = "python /home1/09498/janechen/ns3-transformer-cc/tacc-scripts/genSwitchJobSub.py " + root + " " + file
                 print(cmd+" & ((++cur_jobs))")
