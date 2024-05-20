@@ -14,7 +14,7 @@ file = sys.argv[2]
 
 def copy_state(output_dir, state_trace_path, second_start_line):
     state_out_path = os.path.join(output_dir, "state.txt")
-    print("state_out_path: ", state_out_path)
+    # print("state_out_path: ", state_out_path)
     tmp_cwnd = 0
     with open(state_out_path, "w") as out:
         with open(state_trace_path) as state_trace:
@@ -27,14 +27,14 @@ def copy_state(output_dir, state_trace_path, second_start_line):
                     tmp_cwnd = int(line.split(',')[1])
                 if i == second_start_line:
                     second_start_time = float(line.split(',')[0])
-                    print("second_start_line: %d, second_start_time: %f", second_start_line, second_start_time)
+                    # print("second_start_line: %d, second_start_time: %f", second_start_line, second_start_time)
                     return second_start_time, tmp_cwnd
     
 
 def copy_bw_trace(output_dir, bw_trace_path, first_start_line, second_start_time):
     tmp_bw_trace_path = os.path.join(output_dir, "tmp_bw_trace.txt")
-    print("bw_trace_path: ", bw_trace_path)
-    print("tmp_bw_trace_path: ", tmp_bw_trace_path)
+    # print("bw_trace_path: ", bw_trace_path)
+    # print("tmp_bw_trace_path: ", tmp_bw_trace_path)
     tmp_buf = ""
     with open(tmp_bw_trace_path, "w") as f:
         with open(bw_trace_path) as bw_trace:
@@ -61,7 +61,7 @@ def run_job(output_dir, second_start_cwnd, run_policy, tmp_bw_trace_path, run_ti
         reno_alpha = run_policy.split('-')[1]
         reno_beta = run_policy.split('-')[2]
         cmd = '/home1/09498/janechen/ns3-transformer-cc/ns3 run "scratch/scratch-simulator --tcpTypeId='+type+' --alpha='+reno_alpha+' --renoBeta='+reno_beta+' --initialCwnd='+str(second_start_cwnd)+' --stopTime='+str(second_state_time_length)+' --traceFile='+tmp_bw_trace_path+' --outputDir='+output_dir+'/ --onTimeMean='+om+' --onTimeVar='+ov+' --offTimeMean='+ofm+' --offTimeVar='+ofv+' --runNum='+str(run_time_seed)+' --isSecondPolicy=true"'
-    print(cmd)
+    # print(cmd)
     os.system(cmd)
 
 def gen_data(parent_dir, file_name):
@@ -73,14 +73,14 @@ def gen_data(parent_dir, file_name):
         line_num_index = 13
         om_index = 3
     first_start_line = file_name.split('-')[line_num_index] # get the bandwidth start line in the trace for the first policy
-    print("first_start_line: ", first_start_line)
+    # print("first_start_line: ", first_start_line)
     second_start_line = random.randint(first_state_length, 351) # create the line number in the state trace for the second policy to start from
     output_dir = os.path.join(output_parent_dir, policy, transport, file_name+"-"+str(second_start_line))
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     bw_trace_path = os.path.join(bw_trace_dir, "-".join(file_name.split('-')[line_num_index+1:]))
     state_trace_path = os.path.join(parent_dir, file_name)
-    print("state_trace_path: ", state_trace_path)
+    # print("state_trace_path: ", state_trace_path)
     second_start_time, first_end_cwnd = copy_state(output_dir, state_trace_path, second_start_line)
     tmp_bw_trace_path = copy_bw_trace(output_dir, bw_trace_path, first_start_line, second_start_time)
     run_time_seed = random.randint(0, 1000)
