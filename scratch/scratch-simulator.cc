@@ -221,6 +221,8 @@ main(int argc, char* argv[])
     std::string outputDir = "/mydata/output-traces/";
     int startLine = 0;
     uint32_t runNum = 0;
+    uint32_t initialCwnd = 10;
+    bool isSecondPolicy = false;
 
     // Cubic parameters
     double beta = 0.7;
@@ -261,6 +263,8 @@ main(int argc, char* argv[])
     cmd.AddValue("alpha", "NewReno alpha parameter for additive increase", alpha);
     cmd.AddValue("renoBeta", "NewReno beta parameter for multiplicative decrease", renoBeta);
     cmd.AddValue("runNum", "Run number for randomness seed", runNum);
+    cmd.AddValue("initialCwnd", "Initial congestion window size", initialCwnd);
+    cmd.AddValue("isSecondPolicy", "Whether the current simulation is running the second policy in a policy switch", isSecondPolicy);
     cmd.Parse(argc, argv);
     NS_LOG_DEBUG("Using " << tcpTypeId << " as the transport protocol");
 
@@ -274,12 +278,15 @@ main(int argc, char* argv[])
     // kernel. The same buffer sizes are used as default in this example.
     Config::SetDefault("ns3::TcpSocket::SndBufSize", UintegerValue(4194304));
     Config::SetDefault("ns3::TcpSocket::RcvBufSize", UintegerValue(6291456));
-    Config::SetDefault("ns3::TcpSocket::InitialCwnd", UintegerValue(10));
+    Config::SetDefault("ns3::TcpSocket::InitialCwnd", UintegerValue(initialCwnd));
     Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue(packetSize));
     Config::SetDefault("ns3::TcpCubic::Beta", DoubleValue(beta));
     Config::SetDefault("ns3::TcpCubic::C", DoubleValue(cubicC));
     Config::SetDefault("ns3::TcpNewReno::RenoAlpha", DoubleValue(alpha));
     Config::SetDefault("ns3::TcpNewReno::RenoBeta", UintegerValue(renoBeta));
+    if (isSecondPolicy) {
+        Config::SetDefault("ns3::TcpCubic::HyStart", BooleanValue(false));
+    }
 
     if (tcpTypeId == "TcpDctcp")
     {
@@ -363,15 +370,24 @@ main(int argc, char* argv[])
         name = tcpTypeId + '-' + std::to_string(beta) + '-' + std::to_string(cubicC) + '-' +
                onTimeMean + '-' + onTimeVar + '-' + offTimeMean + '-' + offTimeVar + '-' +
                currentTime + '-' + std::to_string(startLine) + '-' + inputName;
+        if (isSecondPolicy)
+        {
+            name = tcpTypeId + '-' + std::to_string(beta) + '-' + std::to_string(cubicC) + '-' + std::to_string(initialCwnd) + std::to_string(runNum);
+        }
     } else if (tcpTypeId == "TcpNewReno") {
         name = tcpTypeId + '-' + std::to_string(alpha) + '-' + std::to_string(renoBeta) + '-' +
                onTimeMean + '-' + onTimeVar + '-' + offTimeMean + '-' + offTimeVar + '-' +
                currentTime + '-' + std::to_string(startLine) + '-' + inputName;
+        if (isSecondPolicy)
+        {
+            name = tcpTypeId + '-' + std::to_string(alpha) + '-' + std::to_string(renoBeta) + '-' + std::to_string(initialCwnd) + std::to_string(runNum);
+        }
     }
     else
         name = tcpTypeId + '-' + onTimeMean + '-' + onTimeVar + '-' + offTimeMean + '-' +
                offTimeVar + '-' + currentTime + '-' + std::to_string(startLine) + '-' + inputName;
 
+    
     // Install the OnOff application on the sender
     OnOffHelper source("ns3::TcpSocketFactory", InetSocketAddress(ir1.GetAddress(1), port));
     source.SetAttribute("OnTime",
