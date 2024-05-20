@@ -5,7 +5,7 @@ import random
 parent_dir = "/scratch/09498/janechen/"
 policy_full_name_list = ["Cubic-0.5-0.4", "Cubic-0.5-0.8", "Cubic-0.7-0.4", "Cubic-0.7-0.8", "Cubic-0.8-0.4", "Cubic-0.8-0.8", "Cubic-0.9-0.4", "Cubic-0.9-0.8", "NewReno-1.0-1.0", "NewReno-1.0-3.0", "NewReno-1.0-4.0", "NewReno-1-2", "NewReno-1.5-1.0", "NewReno-1.5-2.0", "NewReno-1.5-3.0", "NewReno-1.5-4.0", "NewReno-2.0-1.0", "NewReno-2.0-2.0", "NewReno-2.0-3.0", "NewReno-2.0-4.0"]
 bw_trace_dir = os.path.join(parent_dir, "ns3-traces")
-output_parent_dir = os.path.join(parent_dir, "switch_output")
+output_parent_dir = os.path.join(parent_dir, "switch_output_20")
 first_state_length = 50
 second_state_time_length = 1 # in terms of seconds
 root = sys.argv[1]
