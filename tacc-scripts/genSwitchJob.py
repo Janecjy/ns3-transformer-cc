@@ -6,15 +6,25 @@ policy_list = ["NewReno", "Cubic"]
 def main():
     for policy in policy_list:
         trace_dir = os.path.join(parent_dir, policy)
-        print("trace_dir: ", trace_dir)
+        # print("trace_dir: ", trace_dir)
         # root is the directory path, file is the file name
+        
+        # max_jobs=3; cur_jobs=0
+        # for ((i=0; i<6; i++)); do
+        #   # If true, wait until the next background job finishes to continue.
+        #   ((cur_jobs >= max_jobs)) && wait -n
+        #   # Increment the current number of jobs running.
+        #   ./j"$i" & ((++cur_jobs))
+        # done
+        # wait
+        print("max_jobs=48; cur_jobs=0")
         for root, dirs, files in os.walk(trace_dir):
             for file in files:
-                cmd = "python /home1/09498/janechen/ns3-transformer-cc/tacc-scripts/genSwitchJobSub.py " + root + " " + file + " &"
-                print(cmd)
+                print("((cur_jobs >= max_jobs)) && wait -n")
+                cmd = "python /home1/09498/janechen/ns3-transformer-cc/tacc-scripts/genSwitchJobSub.py " + root + " " + file
+                print(cmd+" & ((++cur_jobs))")
                 break
-            # break
-    print("wait")
+        print("wait")
 
 if __name__ == "__main__":
     main()
