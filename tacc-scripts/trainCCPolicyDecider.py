@@ -141,7 +141,7 @@ class SimpleNN(nn.Module):
 
 # Step 3: Training the model
 
-def train_model(train_loader, epochs=10, learning_rate=0.001):
+def train_model(train_loader, epochs=1000, learning_rate=0.001):
     model = SimpleNN()
     criterion = nn.CrossEntropyLoss(ignore_index=dataset.nan_token)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
@@ -182,7 +182,7 @@ root_dirs = ["/scratch/09498/janechen/switch_output", "/scratch/09498/janechen/s
 dataset = CustomDataset(root_dirs, normalizer)
 
 # Save dataset
-dataset.save('dataset.pth')
+dataset.save('/scratch/09498/janechen/cc-decider-dataset.pth')
 
 # Load dataset (if needed)
 # dataset.load('dataset.pth')
@@ -195,4 +195,4 @@ model = train_model(train_loader)
 test_model(model, test_loader)
 
 # Save the trained model
-torch.save(model.state_dict(), 'model.pth')
+torch.save(model.state_dict(), '/scratch/09498/janechen/cc-decider-model.pth')
