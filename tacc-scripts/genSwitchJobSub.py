@@ -21,21 +21,19 @@ def copy_state(output_dir, state_trace_path, second_start_line):
             start_write = False
             second_start_time = -1
             tmp_cwnd = -1
-            try:
-                for i, line in enumerate(state_trace):
-                    if i == second_start_line - first_state_length:
-                        start_write = True
-                    if start_write:
-                        out.write(line)
-                        tmp_cwnd = int(line.split(',')[1])
-                    if i == second_start_line:
-                        second_start_time = float(line.split(',')[0])
-                        # print("second_start_line: %d, second_start_time: %f", second_start_line, second_start_time)
-                        return second_start_time, tmp_cwnd
-            except Exception as e:
-                print(output_dir, state_trace_path, second_start_line)
+            # check if state_trace is longer than second_start_line
+            if len(state_trace.readlines()) < second_start_line:
                 exit(0)
-                raise e
+            for i, line in enumerate(state_trace):
+                if i == second_start_line - first_state_length:
+                    start_write = True
+                if start_write:
+                    out.write(line)
+                    tmp_cwnd = int(line.split(',')[1])
+                if i == second_start_line:
+                    second_start_time = float(line.split(',')[0])
+                    # print("second_start_line: %d, second_start_time: %f", second_start_line, second_start_time)
+                    return second_start_time, tmp_cwnd
     
 
 def copy_bw_trace(output_dir, bw_trace_path, first_start_line, second_start_time):
