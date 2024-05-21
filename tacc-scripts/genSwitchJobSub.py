@@ -24,9 +24,9 @@ def copy_state(output_dir, state_trace_path, second_start_line):
             second_start_time = -1
             tmp_cwnd = -1
             # check if state_trace is longer than second_start_line
-            if len(state_trace.readlines()) <= second_start_line:
-                # print(state_trace_path, second_start_line)
-                exit(0)
+            # if len(state_trace.readlines()) <= second_start_line:
+            #     # print(state_trace_path, second_start_line)
+            #     exit(0)
             for i, line in enumerate(state_trace):
                 if i == second_start_line - first_state_length:
                     start_write = True
