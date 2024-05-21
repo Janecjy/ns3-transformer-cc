@@ -17,6 +17,7 @@ def copy_state(output_dir, state_trace_path, second_start_line):
     state_out_path = os.path.join(output_dir, "state.txt")
     # print("state_out_path: ", state_out_path)
     tmp_cwnd = 0
+    second_start_time = -1
     with open(state_out_path, "w") as out:
         with open(state_trace_path) as state_trace:
             start_write = False
@@ -36,7 +37,7 @@ def copy_state(output_dir, state_trace_path, second_start_line):
                     second_start_time = float(line.split(',')[0])
                     # print("second_start_line: %d, second_start_time: %f", second_start_line, second_start_time)
                     return second_start_time, tmp_cwnd
-    
+    return second_start_time, tmp_cwnd
 
 def copy_bw_trace(output_dir, bw_trace_path, first_start_line, second_start_time):
     tmp_bw_trace_path = os.path.join(output_dir, "tmp_bw_trace.txt")
@@ -89,15 +90,16 @@ def gen_data(parent_dir, file_name):
     state_trace_path = os.path.join(parent_dir, file_name)
     # print("state_trace_path: ", state_trace_path)
     second_start_time, first_end_cwnd = copy_state(output_dir, state_trace_path, second_start_line)
-    tmp_bw_trace_path = copy_bw_trace(output_dir, bw_trace_path, first_start_line, second_start_time)
-    run_time_seed = random.randint(0, 1000)
-    om = file_name.split('-')[om_index]
-    ov = file_name.split('-')[om_index+1]
-    ofm = file_name.split('-')[om_index+2]
-    ofv = file_name.split('-')[om_index+3]
-    for run_policy in policy_full_name_list:
-        for second_start_cwnd in range(max(1, first_end_cwnd-5), first_end_cwnd+5):
-            run_job(output_dir, second_start_cwnd, run_policy, tmp_bw_trace_path, run_time_seed, om, ov, ofm, ofv)
+    if first_end_cwnd > 0:
+        tmp_bw_trace_path = copy_bw_trace(output_dir, bw_trace_path, first_start_line, second_start_time)
+        run_time_seed = random.randint(0, 1000)
+        om = file_name.split('-')[om_index]
+        ov = file_name.split('-')[om_index+1]
+        ofm = file_name.split('-')[om_index+2]
+        ofv = file_name.split('-')[om_index+3]
+        for run_policy in policy_full_name_list:
+            for second_start_cwnd in range(max(1, first_end_cwnd-5), first_end_cwnd+5):
+                run_job(output_dir, second_start_cwnd, run_policy, tmp_bw_trace_path, run_time_seed, om, ov, ofm, ofv)
 
 def main():
     gen_data(root, file)
