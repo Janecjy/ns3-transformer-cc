@@ -23,8 +23,7 @@ def main():
         for root, dirs, files in os.walk(trace_dir):
             if files and (root.split("/")[-2] == "NewReno-1-2" or root.split("/")[-2] == "Cubic-0.7-0.4"):
                 file_count = len(files)
-                job_num = 0
-                while job_num < file_limit:
+                for i in range(file_limit):
                     file = files[random.randint(0, file_count-1)]
                     print("((cur_jobs >= max_jobs)) && wait -n")
                     cmd = "python /home1/09498/janechen/ns3-transformer-cc/tacc-scripts/genSwitchJobSub.py " + root + " " + file
