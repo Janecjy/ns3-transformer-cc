@@ -5,6 +5,7 @@ import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 from sklearn.preprocessing import LabelEncoder
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import random
 
 # Step 1: Define the custom dataset
 class CustomDataset(Dataset):
@@ -32,6 +33,22 @@ class CustomDataset(Dataset):
 
         self.labels = self.label_encoder.fit_transform(label_list)
         self.nan_token = nan_token
+        self.train_indices, self.test_indices = self.split_data(len(self.data), train_ratio=0.7)
+    
+    def split_data(self, total_size, train_ratio=0.7):
+        indices = list(range(total_size))
+        random.shuffle(indices)
+        train_size = int(total_size * train_ratio)
+        train_indices = indices[:train_size]
+        test_indices = indices[train_size:]
+        return train_indices, test_indices
+
+    def get_train_loader(self, batch_size):
+        return DataLoader(self, batch_size=batch_size, sampler=torch.utils.data.SubsetRandomSampler(self.train_indices))
+    
+    def get_test_loader(self, batch_size):
+        return DataLoader(self, batch_size=batch_size, sampler=torch.utils.data.SubsetRandomSampler(self.test_indices))
+    
     
     def process_file(self, state_file, root_dir, nan_token):
         with open(state_file, 'r') as f:
@@ -123,14 +140,14 @@ class SimpleNN(nn.Module):
         return x
 
 # Step 3: Training the model
-def train_model(dataset, epochs=10, batch_size=32, learning_rate=0.001):
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
+def train_model(train_loader, epochs=10, learning_rate=0.001):
     model = SimpleNN()
     criterion = nn.CrossEntropyLoss(ignore_index=dataset.nan_token)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     
     for epoch in range(epochs):
-        for data, labels in dataloader:
+        for data, labels in train_loader:
             optimizer.zero_grad()
             outputs = model(data.float())
             loss = criterion(outputs, labels)
@@ -139,6 +156,19 @@ def train_model(dataset, epochs=10, batch_size=32, learning_rate=0.001):
         print(f'Epoch {epoch+1}/{epochs}, Loss: {loss.item()}')
     
     return model
+
+def test_model(model, test_loader):
+    model.eval()
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for data, labels in test_loader:
+            outputs = model(data.float())
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+    
+    print(f'Accuracy on test set: {(correct/total)*100:.2f}%')
 
 # Normalizer tensor
 normalizer = [1.0000e+01, 5.4600e+02, 4.2950e+09, 4.0254e+02, 1.0000e+00, 4.7300e+03,
@@ -158,7 +188,11 @@ dataset.save('dataset.pth')
 # dataset.load('dataset.pth')
 
 # Train the model
-model = train_model(dataset)
+train_loader = dataset.get_train_loader(batch_size=32)
+test_loader = dataset.get_test_loader(batch_size=32)
+
+model = train_model(train_loader)
+test_model(model, test_loader)
 
 # Save the trained model
 torch.save(model.state_dict(), 'model.pth')
