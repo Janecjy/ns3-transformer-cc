@@ -62,6 +62,7 @@ class CustomDataset(Dataset):
         data_point = torch.tensor(data_point).view(1, 32, 13) / self.normalizer
         data_point[data_point != data_point] = nan_token  # Replace NaN values with nan_token
         label = self.get_label(root_dir)
+        print(len(self.data))
         return data_point, label
     
     def get_label(self, root_dir):
@@ -124,7 +125,7 @@ class CustomDataset(Dataset):
     def load(self, path):
         self.data, self.labels, self.label_encoder = torch.load(path)
 
-# Step 2: Define the neural network without Conv1d layers
+# Step 2: Define the neural network
 class SimpleNN(nn.Module):
     def __init__(self):
         super(SimpleNN, self).__init__()
