@@ -74,7 +74,7 @@ def gen_data(parent_dir, file_name):
         om_index = 3
     first_start_line = file_name.split('-')[line_num_index] # get the bandwidth start line in the trace for the first policy
     # print("first_start_line: ", first_start_line)
-    second_start_line = random.randint(first_state_length, 351) # create the line number in the state trace for the second policy to start from
+    second_start_line = random.randint(first_state_length+1, 351) # create the line number in the state trace for the second policy to start from
     output_dir = os.path.join(output_parent_dir, policy, transport, file_name+"-"+str(second_start_line))
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
