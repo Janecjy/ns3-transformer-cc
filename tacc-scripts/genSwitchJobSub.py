@@ -19,16 +19,23 @@ def copy_state(output_dir, state_trace_path, second_start_line):
     with open(state_out_path, "w") as out:
         with open(state_trace_path) as state_trace:
             start_write = False
-            for i, line in enumerate(state_trace):
-                if i == second_start_line - first_state_length:
-                    start_write = True
-                if start_write:
-                    out.write(line)
-                    tmp_cwnd = int(line.split(',')[1])
-                if i == second_start_line:
-                    second_start_time = float(line.split(',')[0])
-                    # print("second_start_line: %d, second_start_time: %f", second_start_line, second_start_time)
-                    return second_start_time, tmp_cwnd
+            second_start_time = -1
+            tmp_cwnd = -1
+            try:
+                for i, line in enumerate(state_trace):
+                    if i == second_start_line - first_state_length:
+                        start_write = True
+                    if start_write:
+                        out.write(line)
+                        tmp_cwnd = int(line.split(',')[1])
+                    if i == second_start_line:
+                        second_start_time = float(line.split(',')[0])
+                        # print("second_start_line: %d, second_start_time: %f", second_start_line, second_start_time)
+                        return second_start_time, tmp_cwnd
+            except Exception as e:
+                print(output_dir, state_trace_path, second_start_line)
+                exit(0)
+                raise e
     
 
 def copy_bw_trace(output_dir, bw_trace_path, first_start_line, second_start_time):
@@ -74,7 +81,7 @@ def gen_data(parent_dir, file_name):
         om_index = 3
     first_start_line = file_name.split('-')[line_num_index] # get the bandwidth start line in the trace for the first policy
     # print("first_start_line: ", first_start_line)
-    second_start_line = random.randint(first_state_length+1, 351) # create the line number in the state trace for the second policy to start from
+    second_start_line = random.randint(first_state_length+1, 350) # create the line number in the state trace for the second policy to start from
     output_dir = os.path.join(output_parent_dir, policy, transport, file_name+"-"+str(second_start_line))
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
