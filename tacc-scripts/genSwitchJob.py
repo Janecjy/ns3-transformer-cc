@@ -3,7 +3,7 @@ import random
 
 parent_dir = "/scratch/09498/janechen/"
 policy_list = ["NewReno", "Cubic"]
-file_limit = 100
+file_limit = 50
 
 def main():
     for policy in policy_list:
