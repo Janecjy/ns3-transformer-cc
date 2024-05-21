@@ -4,7 +4,7 @@ parent_dir = "/scratch/09498/janechen/switch_output/"
 
 print("max_jobs=48; cur_jobs=0")
 for root, directories, files in os.walk(parent_dir):
-    if not directories:  #you can check whether a list is empty like that
+    if directories:  #you can check whether a list is empty like that
         #create your file in the current path you checked, it is stored in root variable.
         pass
     print("((cur_jobs >= max_jobs)) && wait -n")
