@@ -42,6 +42,7 @@ class CustomDataset(Dataset):
             data_point = []
             for line in lines:
                 data_point.append([float(x) for x in line.strip().split(',')])
+        data_point = torch.tensor(data_point).view(1, 32, 13) / self.normalizer
         data_point[data_point != data_point] = nan_token  # Replace NaN values with nan_token
         label = self.get_label(root_dir)
         return data_point, label
