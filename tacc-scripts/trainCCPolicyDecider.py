@@ -20,7 +20,7 @@ class CustomDataset(Dataset):
             futures = []
             for root_dir in root_dirs:
                 for subdir, _, files in os.walk(root_dir):
-                    if len(files) == 202 and "state.txt" in files:
+                    if "state.txt" in files:
                         state_file = os.path.join(subdir, "state.txt")
                         futures.append(executor.submit(self.process_file, state_file, subdir, nan_token))
             
@@ -59,6 +59,8 @@ class CustomDataset(Dataset):
             data_point = []
             for line in lines:
                 data_point.append([float(x) for x in line.strip().split(',')])
+                # get last_cwnd to calculate new_cwnd relative difference
+                last_cwnd = line.split(',')[1]
         data_point = torch.tensor(data_point).view(1, 32, 13) / self.normalizer
         data_point[data_point != data_point] = nan_token  # Replace NaN values with nan_token
         label = self.get_label(root_dir)
