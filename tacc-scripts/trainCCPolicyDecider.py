@@ -20,7 +20,7 @@ class CustomDataset(Dataset):
             futures = []
             for root_dir in root_dirs:
                 for subdir, _, files in os.walk(root_dir):
-                    if "state.txt" in files:
+                    if len(files) == 202 and "state.txt" in files:
                         state_file = os.path.join(subdir, "state.txt")
                         futures.append(executor.submit(self.process_file, state_file, subdir, nan_token))
             
