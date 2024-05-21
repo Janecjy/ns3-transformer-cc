@@ -87,6 +87,8 @@ class CustomDataset(Dataset):
         for file in os.listdir(root_dir):
             if file.endswith(".txt"):
                 continue
+            if not f.startswith("TcpCubic-0.700000-0.400000") and not f.startswith("TcpNewReno-1.000000-2"):
+                continue
             tput_max_index = 0
             with open(os.path.join(root_dir, file)) as f:
                 total_reward = 0
