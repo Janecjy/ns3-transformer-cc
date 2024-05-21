@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Step 1: Define the custom dataset
 class CustomDataset(Dataset):
-    def __init__(self, root_dirs, normalizer):
+    def __init__(self, root_dirs, normalizer, nan_token=-1):
         self.data = []
         self.labels = []
         self.label_encoder = LabelEncoder()
@@ -21,7 +21,7 @@ class CustomDataset(Dataset):
                 for subdir, _, files in os.walk(root_dir):
                     if "state.txt" in files:
                         state_file = os.path.join(subdir, "state.txt")
-                        futures.append(executor.submit(self.process_file, state_file, subdir))
+                        futures.append(executor.submit(self.process_file, state_file, subdir, nan_token))
             
             for future in as_completed(futures):
                 result = future.result()
@@ -31,8 +31,9 @@ class CustomDataset(Dataset):
                     label_list.append(label)
 
         self.labels = self.label_encoder.fit_transform(label_list)
+        self.nan_token = nan_token
     
-    def process_file(self, state_file, root_dir):
+    def process_file(self, state_file, root_dir, nan_token):
         with open(state_file, 'r') as f:
             lines = f.readlines()
             if len(lines) < 32:
@@ -41,7 +42,7 @@ class CustomDataset(Dataset):
             data_point = []
             for line in lines:
                 data_point.append([float(x) for x in line.strip().split(',')])
-        data_point = torch.tensor(data_point).view(1, 32, 13) / self.normalizer
+        data_point[data_point != data_point] = nan_token  # Replace NaN values with nan_token
         label = self.get_label(root_dir)
         return data_point, label
     
@@ -89,6 +90,9 @@ class CustomDataset(Dataset):
                 results[file] = total_reward
         label = max(results, key=results.get)
         return label
+    
+    def decode_labels(self, encoded_labels):
+        return self.label_encoder.inverse_transform(encoded_labels)
 
     def __len__(self):
         return len(self.data)
@@ -121,7 +125,7 @@ class SimpleNN(nn.Module):
 def train_model(dataset, epochs=10, batch_size=32, learning_rate=0.001):
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
     model = SimpleNN()
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(ignore_index=dataset.nan_token)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     
     for epoch in range(epochs):
