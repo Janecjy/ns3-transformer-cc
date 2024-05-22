@@ -12,6 +12,7 @@ class CustomDataset(Dataset):
     def __init__(self, root_dirs, normalizer, nan_token=-1):
         self.data = []
         self.labels = []
+        self.rewards = []
         self.label_encoder = LabelEncoder()
         self.normalizer = torch.tensor(normalizer).view(1, 1, -1)  # Reshape to (1, 1, 13) for broadcasting
         label_list = []
@@ -27,9 +28,10 @@ class CustomDataset(Dataset):
             for future in as_completed(futures):
                 result = future.result()
                 if result is not None:
-                    data_point, label = result
+                    data_point, label, rewards = result
                     self.data.append(data_point)
                     label_list.append(label)
+                    self.rewards_list.append(rewards)
 
         self.labels = self.label_encoder.fit_transform(label_list)
         self.nan_token = nan_token
@@ -63,9 +65,9 @@ class CustomDataset(Dataset):
                 last_cwnd = line.split(',')[1]
         data_point = torch.tensor(data_point).view(1, 32, 13) / self.normalizer
         data_point[data_point != data_point] = nan_token  # Replace NaN values with nan_token
-        label = self.get_label(root_dir)
+        label, rewards = self.get_label(root_dir)
         # print(len(self.data))
-        return data_point, label
+        return data_point, label, rewards
     
     def get_label(self, root_dir):
         # Custom label generation logic provided by the user
@@ -112,7 +114,7 @@ class CustomDataset(Dataset):
                             break
                 results[file] = total_reward
         label = max(results, key=results.get)
-        return label
+        return label, results
     
     def decode_labels(self, encoded_labels):
         return self.label_encoder.inverse_transform(encoded_labels)
@@ -124,7 +126,7 @@ class CustomDataset(Dataset):
         return self.data[idx], self.labels[idx]
 
     def save(self, path):
-        torch.save((self.data, self.labels, self.label_encoder), path)
+        torch.save((self.data, self.labels, self.label_encoder, self.rewards), path)
 
     def load(self, path):
         self.data, self.labels, self.label_encoder = torch.load(path)
@@ -181,7 +183,7 @@ normalizer = [1.0000e+01, 5.4600e+02, 4.2950e+09, 4.0254e+02, 1.0000e+00, 4.7300
               6.0121e+06]
 
 # Directories
-root_dirs = ["/scratch/09498/janechen/switch_output", "/scratch/09498/janechen/switch_output_20", "/scratch/09498/janechen/switch_output_50"]
+root_dirs = ["/scratch/09498/janechen/switch_output", "/scratch/09498/janechen/switch_output_20", "/scratch/09498/janechen/switch_output_50", "/scratch/09498/janechen/switch_output_100", "/scratch/09498/janechen/switch_output_200"]
 
 # Create dataset
 dataset = CustomDataset(root_dirs, normalizer)
