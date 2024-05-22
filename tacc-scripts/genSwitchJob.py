@@ -1,9 +1,10 @@
 import os
+import sys
 import random
 
 parent_dir = "/scratch/09498/janechen/"
 policy_list = ["NewReno", "Cubic"]
-file_limit = 200
+file_limit = sys.argv[1]
 
 def main():
     for policy in policy_list:
@@ -21,12 +22,12 @@ def main():
         # wait
         print("max_jobs=48; cur_jobs=0")
         for root, dirs, files in os.walk(trace_dir):
-            if files and (root.split("/")[-2] == "NewReno-1-2" or root.split("/")[-2] == "Cubic-0.7-0.4"):
+            if files: #and (root.split("/")[-2] == "NewReno-1-2" or root.split("/")[-2] == "Cubic-0.7-0.4"):
                 file_count = len(files)
-                for i in range(file_limit):
+                for i in range(int(file_limit)):
                     file = files[random.randint(0, file_count-1)]
                     print("((cur_jobs >= max_jobs)) && wait -n")
-                    cmd = "python /home1/09498/janechen/ns3-transformer-cc/tacc-scripts/genSwitchJobSub.py " + root + " " + file
+                    cmd = "python /home1/09498/janechen/ns3-transformer-cc/tacc-scripts/genSwitchJobSub.py " + root + " " + file + " " + "switch_output_" + file_limit
                     print(cmd+" & ((++cur_jobs))")
                 # for file in files:
                 #     print("((cur_jobs >= max_jobs)) && wait -n")
