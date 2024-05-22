@@ -20,7 +20,7 @@ class CustomDataset(Dataset):
             futures = []
             for root_dir in root_dirs:
                 for subdir, _, files in os.walk(root_dir):
-                    if "state.txt" in files:
+                    if "state.txt" in files and len(files) > 20 and "tmp_bw_trace.txt" in files:
                         state_file = os.path.join(subdir, "state.txt")
                         futures.append(executor.submit(self.process_file, state_file, subdir, nan_token))
             
@@ -181,7 +181,7 @@ normalizer = [1.0000e+01, 5.4600e+02, 4.2950e+09, 4.0254e+02, 1.0000e+00, 4.7300
               6.0121e+06]
 
 # Directories
-root_dirs = ["/scratch/09498/janechen/switch_output", "/scratch/09498/janechen/switch_output_20"]
+root_dirs = ["/scratch/09498/janechen/switch_output", "/scratch/09498/janechen/switch_output_20", "/scratch/09498/janechen/switch_output_50"]
 
 # Create dataset
 dataset = CustomDataset(root_dirs, normalizer)
@@ -193,11 +193,11 @@ dataset.save('/scratch/09498/janechen/cc-decider-dataset.pth')
 # dataset.load('dataset.pth')
 
 # Train the model
-train_loader = dataset.get_train_loader(batch_size=32)
-test_loader = dataset.get_test_loader(batch_size=32)
+# train_loader = dataset.get_train_loader(batch_size=32)
+# test_loader = dataset.get_test_loader(batch_size=32)
 
-model = train_model(train_loader)
-test_model(model, test_loader)
+# model = train_model(train_loader)
+# test_model(model, test_loader)
 
-# Save the trained model
-torch.save(model.state_dict(), '/scratch/09498/janechen/cc-decider-model.pth')
+# # Save the trained model
+# torch.save(model.state_dict(), '/scratch/09498/janechen/cc-decider-model.pth')
