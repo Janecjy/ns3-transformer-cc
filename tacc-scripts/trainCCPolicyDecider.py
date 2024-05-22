@@ -31,7 +31,7 @@ class CustomDataset(Dataset):
                     data_point, label, rewards = result
                     self.data.append(data_point)
                     label_list.append(label)
-                    self.rewards_list.append(rewards)
+                    self.rewards.append(rewards)
 
         self.labels = self.label_encoder.fit_transform(label_list)
         self.nan_token = nan_token
