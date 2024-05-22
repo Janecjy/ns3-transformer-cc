@@ -86,6 +86,9 @@ def gen_data(parent_dir, file_name):
     output_dir = os.path.join(output_parent_dir, policy, transport, file_name+"-"+str(second_start_line))
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
+    else:
+        if len(os.listdir(output_dir)) > 0 and "state.txt" in os.listdir(output_dir) and "tmp_bw_trace.txt" in os.listdir(output_dir):
+            return
     bw_trace_path = os.path.join(bw_trace_dir, "-".join(file_name.split('-')[line_num_index+1:]))
     state_trace_path = os.path.join(parent_dir, file_name)
     # print("state_trace_path: ", state_trace_path)
