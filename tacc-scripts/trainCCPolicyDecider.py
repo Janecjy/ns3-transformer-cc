@@ -183,7 +183,7 @@ normalizer = [1.0000e+01, 5.4600e+02, 4.2950e+09, 4.0254e+02, 1.0000e+00, 4.7300
               6.0121e+06]
 
 # Directories
-root_dirs = ["/scratch/09498/janechen/switch_output", "/scratch/09498/janechen/switch_output_20", "/scratch/09498/janechen/switch_output_50", "/scratch/09498/janechen/switch_output_100", "/scratch/09498/janechen/switch_output_200"]
+root_dirs = ["/scratch/09498/janechen/switch_output_30"] # ["/scratch/09498/janechen/switch_output", "/scratch/09498/janechen/switch_output_20", "/scratch/09498/janechen/switch_output_50", "/scratch/09498/janechen/switch_output_100", "/scratch/09498/janechen/switch_output_200"]
 
 # Create dataset
 dataset = CustomDataset(root_dirs, normalizer)
