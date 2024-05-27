@@ -112,7 +112,13 @@ class CustomDataset(Dataset):
                         line_count += 1
                         if line_count >= line_limit:
                             break
-                results[file] = total_reward
+                shared_filename = '-'.join(file.split('-')[:4])
+                # shared_filename = file.split('-')[0] + '-' + file.split('-')[1] + '-' + file.split('-')[2] + '-' + file.split('-')[3]
+                if shared_filename not in results.keys():
+                    # print("Parsing new file: ", shared_filename)
+                    results[shared_filename] = 0
+                results[shared_filename] += total_reward
+                
         label = max(results, key=results.get)
         return label, results
     
