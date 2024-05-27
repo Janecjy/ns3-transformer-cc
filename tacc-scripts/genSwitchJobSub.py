@@ -12,6 +12,7 @@ root = sys.argv[1]
 file = sys.argv[2]
 output_path_name = sys.argv[3]
 output_parent_dir = os.path.join(parent_dir, output_path_name)
+run_num = 20
 
 
 def copy_state(output_dir, state_trace_path, second_start_line):
@@ -59,7 +60,8 @@ def copy_bw_trace(output_dir, bw_trace_path, first_start_line, second_start_time
                 if t > second_start_time + second_state_time_length:
                     return tmp_bw_trace_path
 
-def run_job(output_dir, second_start_cwnd, run_policy, tmp_bw_trace_path, run_time_seed, om, ov, ofm, ofv):
+def run_job(output_dir, second_start_cwnd, run_policy, tmp_bw_trace_path, om, ov, ofm, ofv):
+    run_time_seed = random.randint(0, 100000)
     if run_policy.split('-')[0] == "Cubic":
         type = "TcpCubic"
         cubic_beta = run_policy.split('-')[1]
@@ -96,14 +98,14 @@ def gen_data(parent_dir, file_name):
     second_start_time, first_end_cwnd = copy_state(output_dir, state_trace_path, second_start_line)
     if first_end_cwnd > 0:
         tmp_bw_trace_path = copy_bw_trace(output_dir, bw_trace_path, first_start_line, second_start_time)
-        run_time_seed = random.randint(0, 1000)
         om = file_name.split('-')[om_index]
         ov = file_name.split('-')[om_index+1]
         ofm = file_name.split('-')[om_index+2]
         ofv = file_name.split('-')[om_index+3]
         for run_policy in policy_full_name_list:
-            for second_start_cwnd in range(max(1, first_end_cwnd-5), first_end_cwnd+5):
-                run_job(output_dir, second_start_cwnd, run_policy, tmp_bw_trace_path, run_time_seed, om, ov, ofm, ofv)
+            for second_start_cwnd in [max(1, first_end_cwnd-5), first_end_cwnd, first_end_cwnd+5]: #range(max(1, first_end_cwnd-5), first_end_cwnd+5):
+                for _ in range(run_num):
+                    run_job(output_dir, second_start_cwnd, run_policy, tmp_bw_trace_path, om, ov, ofm, ofv)
 
 def main():
     gen_data(root, file)

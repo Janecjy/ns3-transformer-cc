@@ -27,7 +27,7 @@ def main():
                 for i in range(int(file_limit)):
                     file = files[random.randint(0, file_count-1)]
                     print("((cur_jobs >= max_jobs)) && wait -n")
-                    cmd = "python /home1/09498/janechen/ns3-transformer-cc/tacc-scripts/genSwitchJobSub.py " + root + " " + file + " " + "switch_output_" + file_limit
+                    cmd = "python /home1/09498/janechen/ns3-transformer-cc/tacc-scripts/genSwitchJobSub.py " + root + " " + file + " " + "switch_output_avg_" + file_limit
                     print(cmd+" & ((++cur_jobs))")
                 # for file in files:
                 #     print("((cur_jobs >= max_jobs)) && wait -n")
