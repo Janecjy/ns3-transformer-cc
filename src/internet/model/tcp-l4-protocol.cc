@@ -30,6 +30,7 @@
 #include "ipv6-routing-protocol.h"
 #include "rtt-estimator.h"
 #include "tcp-congestion-ops.h"
+#include "tcp-composite.h"
 #include "tcp-cubic.h"
 #include "tcp-header.h"
 #include "tcp-prr-recovery.h"
