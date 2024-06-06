@@ -4,6 +4,7 @@ results/
 *.orig
 *.patch
 *.rej
+*.ipynb
 
 *.o
 *.pyc
