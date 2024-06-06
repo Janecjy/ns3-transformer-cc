@@ -40,7 +40,7 @@ uint32_t prev = 0;
 Time prevTime = Seconds(0);
 uint32_t currentCwnd = 0;
 uint32_t ssThresh = 0;
-uint32_t g_firstBytesReceived = 0; //!< First received packet size.
+// uint32_t g_firstBytesReceived = 0; //!< First received packet size.
 double pacingRate = 0;
 std::vector<uint64_t> delay;
 uint32_t rto = 0;
@@ -56,13 +56,12 @@ NS_LOG_COMPONENT_DEFINE("ScratchSimulator");
 void
 OutputStats()
 {
-    double throughput = g_firstBytesReceived * 8 / measureInterval / 1e6;
+    // double throughput = g_firstBytesReceived * 8 / measureInterval / 1e6;
     double avgDelay = accumulate(delay.begin(), delay.end(), 0.0) / delay.size();
-    output << Simulator::Now().GetSeconds() << ", " << currentCwnd << ", " << ssThresh << ", "
-           << throughput << ", " << pacingRate << ", " << avgDelay << ", " << rto << ", "
+    output << Simulator::Now().GetSeconds() << ", " << currentCwnd << ", " << ssThresh << ", " << pacingRate << ", " << avgDelay << ", " << rto << ", "
            << dropObserved << ", " << markObserved << ", " << queueLength << ", " << bytesInFlight
            << ", " << tx << ", " << unAck << std::endl;
-    g_firstBytesReceived = 0;
+    // g_firstBytesReceived = 0;
     delay.clear();
     dropObserved = 0;
     markObserved = 0;
@@ -75,11 +74,11 @@ OutputStats()
  * \param packet The packet.
  * \param address The sender address.
  */
-void
-RecvTputTracer(Ptr<const Packet> packet, const Address& address)
-{
-    g_firstBytesReceived += packet->GetSize();
-}
+// void
+// RecvTputTracer(Ptr<const Packet> packet, const Address& address)
+// {
+//     g_firstBytesReceived += packet->GetSize();
+// }
 
 // Trace congestion window
 void
@@ -157,8 +156,8 @@ ConnectTracer()
     Config::ConnectWithoutContextFailSafe(
         "/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/SlowStartThreshold",
         MakeCallback(&SsThreshTracer));
-    Config::ConnectWithoutContextFailSafe("/NodeList/1/ApplicationList/*/$ns3::PacketSink/Rx",
-                                          MakeCallback(&RecvTputTracer));
+    // Config::ConnectWithoutContextFailSafe("/NodeList/1/ApplicationList/*/$ns3::PacketSink/Rx",
+    //                                       MakeCallback(&RecvTputTracer));
     Config::ConnectWithoutContextFailSafe("/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/PacingRate",
                                           MakeCallback(&PacingRateTracer));
     Config::ConnectWithoutContextFailSafe("/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/RTT",
@@ -207,13 +206,13 @@ main(int argc, char* argv[])
     strftime(buffer, sizeof(buffer), "%d-%m-%Y-%I-%M-%S", timeinfo);
     std::string currentTime(buffer);
 
-    std::string tcpTypeId = "TcpBbr";
-    std::string queueType = "FqCoDelQueueDisc";
+    std::string tcpTypeId = "TcpNewReno";
+    std::string queueType = "FifoQueueDisc";
     std::string onTimeMean = "1";
     std::string onTimeVar = "0.1";
     std::string offTimeMean = "0.2";
     std::string offTimeVar = "0.05";
-    Time stopTime = Seconds(100);
+    Time stopTime = Seconds(10);
     std::string oneWayDelay = "10ms";
     bool queueUseEcn = false;
     Time ceThreshold = MilliSeconds(1);
@@ -271,6 +270,28 @@ main(int argc, char* argv[])
     ns3::RngSeedManager::SetRun(runNum);
     queueType = std::string("ns3::") + queueType;
 
+    MakeDirectories(outputDir);
+    std::string inputName = traceFile;
+    inputName.erase(0, 1);
+    for (int i = 0; i < 4; ++i)
+    {
+        inputName.erase(0, inputName.find("/") + 1);
+    }
+    NS_LOG_DEBUG("inputName: " << inputName);
+    if (tcpTypeId == "TcpCubic")
+    {
+        name = tcpTypeId + '-' + std::to_string(beta) + '-' + std::to_string(cubicC) + '-' +
+               onTimeMean + '-' + onTimeVar + '-' + offTimeMean + '-' + offTimeVar + '-' +
+               currentTime + '-' + std::to_string(startLine) + '-' + inputName;
+    } else if (tcpTypeId == "TcpNewReno") {
+        name = tcpTypeId + '-' + std::to_string(alpha) + '-' + std::to_string(renoBeta) + '-' +
+               onTimeMean + '-' + onTimeVar + '-' + offTimeMean + '-' + offTimeVar + '-' +
+               currentTime + '-' + std::to_string(startLine) + '-' + inputName;
+    }
+    else
+        name = tcpTypeId + '-' + onTimeMean + '-' + onTimeVar + '-' + offTimeMean + '-' +
+               offTimeVar + '-' + currentTime + '-' + std::to_string(startLine) + '-' + inputName;
+
     Config::SetDefault("ns3::TcpL4Protocol::SocketType", StringValue("ns3::" + tcpTypeId));
 
     // The maximum send buffer size is set to 41943040 bytes (40MB) and the
@@ -284,27 +305,13 @@ main(int argc, char* argv[])
     Config::SetDefault("ns3::TcpCubic::C", DoubleValue(cubicC));
     Config::SetDefault("ns3::TcpNewReno::RenoAlpha", DoubleValue(alpha));
     Config::SetDefault("ns3::TcpNewReno::RenoBeta", UintegerValue(renoBeta));
-    if (isSecondPolicy) {
-        Config::SetDefault("ns3::TcpCubic::HyStart", BooleanValue(false));
-    }
+    Config::SetDefault("ns3::TcpRxBuffer::TputOutputPath", StringValue(outputDir + name +"-tput"));
 
-    if (tcpTypeId == "TcpDctcp")
-    {
-        Config::SetDefault(queueType + "::CeThreshold", TimeValue(ceThreshold));
-        if (!queueUseEcn)
-        {
-            NS_LOG_WARN("Warning: using DCTCP with queue ECN disabled");
-        }
-    }
-    if (queueUseEcn)
-    {
-        Config::SetDefault(queueType + "::UseEcn", BooleanValue(true));
-    }
     // Enable TCP to use ECN regardless
-    // Config::SetDefault("ns3::TcpSocketBase::UseEcn", StringValue("On"));
+    Config::SetDefault("ns3::TcpSocketBase::UseEcn", StringValue("Off"));
 
     Config::SetDefault("ns3::DropTailQueue<Packet>::MaxSize", QueueSizeValue(QueueSize("1p")));
-    Config::SetDefault(queueType + "::MaxSize", QueueSizeValue(QueueSize("138p")));
+    Config::SetDefault(queueType + "::MaxSize", QueueSizeValue(QueueSize("20p")));
 
     NodeContainer sender;
     NodeContainer receiver;
@@ -358,36 +365,6 @@ main(int argc, char* argv[])
     // Select sender side port
     uint16_t port = 50001;
 
-    std::string inputName = traceFile;
-    inputName.erase(0, 1);
-    for (int i = 0; i < 4; ++i)
-    {
-        inputName.erase(0, inputName.find("/") + 1);
-    }
-    NS_LOG_DEBUG("inputName: " << inputName);
-    if (tcpTypeId == "TcpCubic")
-    {
-        name = tcpTypeId + '-' + std::to_string(beta) + '-' + std::to_string(cubicC) + '-' +
-               onTimeMean + '-' + onTimeVar + '-' + offTimeMean + '-' + offTimeVar + '-' +
-               currentTime + '-' + std::to_string(startLine) + '-' + inputName;
-        if (isSecondPolicy)
-        {
-            name = tcpTypeId + '-' + std::to_string(beta) + '-' + std::to_string(cubicC) + '-' + std::to_string(initialCwnd) + '-' + std::to_string(runNum);
-        }
-    } else if (tcpTypeId == "TcpNewReno") {
-        name = tcpTypeId + '-' + std::to_string(alpha) + '-' + std::to_string(renoBeta) + '-' +
-               onTimeMean + '-' + onTimeVar + '-' + offTimeMean + '-' + offTimeVar + '-' +
-               currentTime + '-' + std::to_string(startLine) + '-' + inputName;
-        if (isSecondPolicy)
-        {
-            name = tcpTypeId + '-' + std::to_string(alpha) + '-' + std::to_string(renoBeta) + '-' + std::to_string(initialCwnd) + '-' + std::to_string(runNum);
-        }
-    }
-    else
-        name = tcpTypeId + '-' + onTimeMean + '-' + onTimeVar + '-' + offTimeMean + '-' +
-               offTimeVar + '-' + currentTime + '-' + std::to_string(startLine) + '-' + inputName;
-
-    
     // Install the OnOff application on the sender
     OnOffHelper source("ns3::TcpSocketFactory", InetSocketAddress(ir1.GetAddress(1), port));
     source.SetAttribute("OnTime",
@@ -423,10 +400,9 @@ main(int argc, char* argv[])
     qd.Get(0)->TraceConnectWithoutContext("PacketsInQueue", MakeCallback(&QueueLengthTracer));
 
     // Open files for writing outputs
-    MakeDirectories(outputDir);
     output.open(outputDir + name, std::ios::out);
 
-    output << "Time, currentCwnd, ssThres, throughput, pacingRate, avgDelay, rto, dropObserved, "
+    output << "Time, currentCwnd, ssThres, pacingRate, avgDelay, rto, dropObserved, "
               "markObserved, "
               "queueLength, bytesInFlight, tx, unAck"
            << std::endl;
