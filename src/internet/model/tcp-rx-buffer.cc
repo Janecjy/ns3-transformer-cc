@@ -21,6 +21,7 @@
 
 #include "ns3/log.h"
 #include "ns3/packet.h"
+#include "ns3/core-module.h"
 
 namespace ns3
 {
@@ -36,10 +37,19 @@ TcpRxBuffer::GetTypeId()
                             .SetParent<Object>()
                             .SetGroupName("Internet")
                             .AddConstructor<TcpRxBuffer>()
+                            .AddAttribute("TputOutputPath",
+                                          "The path to the throughput output file",
+                                          StringValue("./tput-out"),
+                                          MakeStringAccessor(&TcpRxBuffer::m_tputOutputPath),
+                                          MakeStringChecker())
                             .AddTraceSource("NextRxSequence",
                                             "Next sequence number expected (RCV.NXT)",
                                             MakeTraceSourceAccessor(&TcpRxBuffer::m_nextRxSeq),
-                                            "ns3::SequenceNumber32TracedValueCallback");
+                                            "ns3::SequenceNumber32TracedValueCallback")
+                            .AddTraceSource("ReceivedBytes",
+                                            "Number of bytes received",
+                                            MakeTraceSourceAccessor(&TcpRxBuffer::m_receivedBytes),
+                                            "ns3::TracedValueCallback::Uint32");
     return tid;
 }
 
@@ -55,12 +65,14 @@ TcpRxBuffer::TcpRxBuffer(uint32_t n)
       m_gotFin(false),
       m_size(0),
       m_maxBuffer(32768),
-      m_availBytes(0)
+      m_availBytes(0),
+      m_receivedBytes(0)
 {
 }
 
 TcpRxBuffer::~TcpRxBuffer()
 {
+    // m_tputOutFile.close();
 }
 
 SequenceNumber32
@@ -212,6 +224,18 @@ TcpRxBuffer::Add(Ptr<Packet> p, const TcpHeader& tcph)
     NS_ASSERT(m_data.find(headSeq) == m_data.end()); // Shouldn't be there yet
     m_data[headSeq] = p;
 
+    // Count p->GetSize() bytes as available
+    // m_receivedBytes = m_receivedBytes + p->GetSize();
+    // open file for throughput output
+    std::ofstream outFile(m_tputOutputPath, std::ios::app);
+    if (!outFile.is_open())
+    {
+        NS_LOG_ERROR("Error opening file " << m_tputOutputPath);
+    } else {
+        outFile << Simulator::Now().GetSeconds() << ", " << p->GetSize() << std::endl;
+        outFile.close();
+    }
+        
     if (headSeq > m_nextRxSeq)
     {
         // Generate a new SACK block

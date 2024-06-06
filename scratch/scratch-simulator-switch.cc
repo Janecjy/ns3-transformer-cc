@@ -41,6 +41,7 @@ Time prevTime = Seconds(0);
 uint32_t currentCwnd = 0;
 uint32_t ssThresh = 0;
 uint32_t g_firstBytesReceived = 0; //!< First received packet size.
+uint32_t g_firstBytesLastReceived = 0;     //!< First sent packet size.
 double pacingRate = 0;
 std::vector<uint64_t> delay;
 uint32_t rto = 0;
@@ -56,6 +57,7 @@ NS_LOG_COMPONENT_DEFINE("ScratchSimulatorSwitch");
 void
 OutputStats()
 {
+    g_firstBytesLastReceived = g_firstBytesReceived;
     double throughput = g_firstBytesReceived * 8 / measureInterval / 1e6;
     double avgDelay = accumulate(delay.begin(), delay.end(), 0.0) / delay.size();
     output << Simulator::Now().GetSeconds() << ", " << currentCwnd << ", " << ssThresh << ", "
@@ -75,10 +77,16 @@ OutputStats()
  * \param packet The packet.
  * \param address The sender address.
  */
-void
-RecvTputTracer(Ptr<const Packet> packet, const Address& address)
+// void
+// RecvTputTracer(Ptr<const Packet> packet, const Address& address)
+// {
+//     g_firstBytesReceived += packet->GetSize();
+// }
+
+void RecvTputTracer(uint32_t oldval, uint32_t newval)
 {
-    g_firstBytesReceived += packet->GetSize();
+    std::cout << "RecvTputTracer newval: " << newval << "\n";
+    g_firstBytesReceived = newval - g_firstBytesLastReceived;
 }
 
 // Trace congestion window
@@ -157,8 +165,8 @@ ConnectTracer()
     Config::ConnectWithoutContextFailSafe(
         "/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/SlowStartThreshold",
         MakeCallback(&SsThreshTracer));
-    Config::ConnectWithoutContextFailSafe("/NodeList/1/ApplicationList/*/$ns3::PacketSink/Rx",
-                                          MakeCallback(&RecvTputTracer));
+    // Config::ConnectWithoutContextFailSafe("/NodeList/1/ApplicationList/*/$ns3::PacketSink/Rx",
+    //                                       MakeCallback(&RecvTputTracer));
     Config::ConnectWithoutContextFailSafe("/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/PacingRate",
                                           MakeCallback(&PacingRateTracer));
     Config::ConnectWithoutContextFailSafe("/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/RTT",
@@ -171,9 +179,9 @@ ConnectTracer()
     Config::ConnectWithoutContextFailSafe(
         "/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/NextTxSequence",
         MakeCallback(&TxTracer));
-    Config::ConnectWithoutContextFailSafe(
-        "/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/TxBuffer/UnackSequence",
-        MakeCallback(&UnAckTracer));
+    // Config::ConnectWithoutContext(
+    //     "/NodeList/*/$ns3::TcpL4Protocol/SocketList/*/RxBuffer/ReceivedBytes",
+    //     MakeCallback(&RecvTputTracer));
 }
 
 void
@@ -181,11 +189,28 @@ ChangeBottleneckBw(std::string bw)
 {
     NS_LOG_LOGIC("Changing bottleneck bandwidth to " << bw << " at "
                                                      << Simulator::Now().GetMilliSeconds() << "ms");
-    std::cout << "Changing bottleneck bandwidth to " << bw << " at "
-              << Simulator::Now().GetMilliSeconds() << "ms" << std::endl;
     Config::Set("/NodeList/2/DeviceList/1/$ns3::PointToPointNetDevice/DataRate", StringValue(bw));
     Config::Set("/NodeList/3/DeviceList/0/$ns3::PointToPointNetDevice/DataRate", StringValue(bw));
 }
+
+static Ptr<OutputStreamWrapper> nextRxStream;  
+
+// static void
+// NextRxTracer(std::string context, SequenceNumber32 old [[maybe_unused]], SequenceNumber32 nextRx)
+// {
+//     std::cout << "NextRx: " << nextRx << "\n";
+//     *nextRxStream->GetStream()
+//         << Simulator::Now().GetSeconds() << " " << nextRx << std::endl;
+// }
+
+// static void
+// TraceNextRx()
+// {
+//     AsciiTraceHelper ascii;
+//     nextRxStream = ascii.CreateFileStream("rx-out");
+//     // Config::Connect("/NodeList/*/$ns3::TcpL4Protocol/SocketList/*/RxBuffer/NextRxSequence",
+//     //                 MakeCallback(&NextRxTracer));
+// }
 
 // void
 // ChangeCongestionControl(std::string tcpTypeId, double firstPolicyFirstParam, double firstPolicySecondParam)
@@ -204,7 +229,7 @@ int
 main(int argc, char* argv[])
 {
     // NS_LOG_UNCOND("Scratch Simulator for transformer-cc");
-    // LogComponentEnable("ScratchSimulator", LOG_LEVEL_LOGIC);
+    // LogComponentEnable("ScratchSimulatorSwitch", LOG_LEVEL_LOGIC);
     // LogComponentEnable("BulkSendApplication", LOG_LEVEL_LOGIC);
     // LogComponentEnable("OnOffApplication", LOG_LEVEL_DEBUG);
     // LogComponentEnable("TcpSocketBase", LOG_LEVEL_DEBUG);
@@ -212,7 +237,7 @@ main(int argc, char* argv[])
     // LogComponentEnable("Ipv4FlowProbe", LOG_LEVEL_DEBUG);
     // LogComponentEnable("TcpDctcp", LOG_LEVEL_INFO);
     // LogComponentEnable("TcpCongestionOps", LOG_LEVEL_FUNCTION);
-    LogComponentEnable("TcpComposite", LOG_LEVEL_DEBUG);
+    // LogComponentEnable("TcpComposite", LOG_LEVEL_DEBUG);
 
     // Naming the output directory using local system time
     time_t rawtime;
@@ -294,6 +319,19 @@ main(int argc, char* argv[])
     ns3::RngSeedManager::SetRun(runNum);
     queueType = std::string("ns3::") + queueType;
 
+    MakeDirectories(outputDir);
+    std::string inputName = traceFile;
+    inputName.erase(0, 1);
+    for (int i = 0; i < 4; ++i)
+    {
+        inputName.erase(0, inputName.find("/") + 1);
+    }
+    NS_LOG_DEBUG("inputName: " << inputName);
+
+    name = firstTcpTypeId + '-' + std::to_string(firstPolicyFirstParam) + '-' + std::to_string(firstPolicyFirstParam) + '-' +
+            onTimeMean + '-' + onTimeVar + '-' + offTimeMean + '-' + offTimeVar + '-' +
+            currentTime + '-' + std::to_string(startLine) + '-' + inputName;
+
     Config::SetDefault("ns3::TcpL4Protocol::SocketType", StringValue("ns3::TcpComposite"));
     // Config::SetDefault("ns3::TcpL4Protocol::SocketType",
     //                    TypeIdValue(TypeId::LookupByName("ns3::TcpComposite")));
@@ -308,6 +346,7 @@ main(int argc, char* argv[])
     Config::SetDefault("ns3::TcpComposite::FirstPolicyName", StringValue(firstTcpTypeId));
     Config::SetDefault("ns3::TcpComposite::FirstPolicyFirstParameter", DoubleValue(firstPolicyFirstParam));
     Config::SetDefault("ns3::TcpComposite::FirstPolicySecondParameter", DoubleValue(firstPolicySecondParam));
+    Config::SetDefault("ns3::TcpRxBuffer::TputOutputPath", StringValue(outputDir + name +"-tput"));
     // Config::SetDefault("ns3::TcpCubic::Beta", DoubleValue(beta));
     // Config::SetDefault("ns3::TcpCubic::C", DoubleValue(cubicC));
     // Config::SetDefault("ns3::TcpNewReno::RenoAlpha", DoubleValue(alpha));
@@ -370,19 +409,6 @@ main(int argc, char* argv[])
 
     // Select sender side port
     uint16_t port = 50001;
-
-    std::string inputName = traceFile;
-    inputName.erase(0, 1);
-    for (int i = 0; i < 4; ++i)
-    {
-        inputName.erase(0, inputName.find("/") + 1);
-    }
-    NS_LOG_DEBUG("inputName: " << inputName);
-
-    name = firstTcpTypeId + '-' + std::to_string(firstPolicyFirstParam) + '-' + std::to_string(firstPolicyFirstParam) + '-' +
-            onTimeMean + '-' + onTimeVar + '-' + offTimeMean + '-' + offTimeVar + '-' +
-            currentTime + '-' + std::to_string(startLine) + '-' + inputName;
-
     
     // Install the OnOff application on the sender
     OnOffHelper source("ns3::TcpSocketFactory", InetSocketAddress(ir1.GetAddress(1), port));
@@ -399,6 +425,8 @@ main(int argc, char* argv[])
     sourceApps.Start(Seconds(0.1));
     // Hook trace source after application starts
     Simulator::Schedule(Seconds(0.1) + MilliSeconds(1), &ConnectTracer);
+    // Simulator::Schedule(Seconds(0.1) + MilliSeconds(1),
+    //                             &TraceNextRx);
     sourceApps.Stop(stopTime);
 
     // Install application on the receiver
@@ -419,7 +447,6 @@ main(int argc, char* argv[])
     qd.Get(0)->TraceConnectWithoutContext("PacketsInQueue", MakeCallback(&QueueLengthTracer));
 
     // Open files for writing outputs
-    MakeDirectories(outputDir);
     output.open(outputDir + name, std::ios::out);
 
     output << "Time, currentCwnd, ssThres, throughput, pacingRate, avgDelay, rto, dropObserved, "

@@ -222,6 +222,8 @@ class TcpRxBuffer : public Object
 
     TcpOptionSack::SackList m_sackList; //!< Sack list (updated constantly)
 
+    std::string m_tputOutputPath; //!< Path to the file where throughput is written
+
     /// container for data stored in the buffer
     typedef std::map<SequenceNumber32, Ptr<Packet>>::iterator BufIterator;
     TracedValue<SequenceNumber32>
@@ -231,6 +233,7 @@ class TcpRxBuffer : public Object
     uint32_t m_size;       //!< Number of total data bytes in the buffer, not necessarily contiguous
     uint32_t m_maxBuffer;  //!< Upper bound of the number of data bytes in buffer (RCV.WND)
     uint32_t m_availBytes; //!< Number of bytes available to read, i.e. contiguous block at head
+    TracedValue<uint32_t> m_receivedBytes; //!< Number of bytes received
     std::map<SequenceNumber32, Ptr<Packet>> m_data; //!< Corresponding data (may be null)
 };
 
