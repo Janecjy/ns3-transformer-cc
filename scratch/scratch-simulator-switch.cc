@@ -237,7 +237,7 @@ main(int argc, char* argv[])
     // LogComponentEnable("Ipv4FlowProbe", LOG_LEVEL_DEBUG);
     // LogComponentEnable("TcpDctcp", LOG_LEVEL_INFO);
     // LogComponentEnable("TcpCongestionOps", LOG_LEVEL_FUNCTION);
-    // LogComponentEnable("TcpComposite", LOG_LEVEL_DEBUG);
+    // LogComponentEnable("TcpComposite", LOG_LEVEL_FUNCTION);
 
     // Naming the output directory using local system time
     time_t rawtime;
@@ -251,12 +251,18 @@ main(int argc, char* argv[])
     std::string firstTcpTypeId = "TcpNewReno";
     double firstPolicyFirstParam = 1;
     double firstPolicySecondParam = 2;
+    // std::string firstTcpTypeId = "TcpCubic";
+    // double firstPolicyFirstParam = 0.7;
+    // double firstPolicySecondParam = 0.4;
     // std::string secondTcpTypeId = "TcpNewReno";
     // double secondPolicyFirstParam = 1;
     // double secondPolicySecondParam = 2;
+    std::string secondTcpTypeId = "TcpCubic";
+    double secondPolicyFirstParam = 0.7;
+    double secondPolicySecondParam = 0.4;
     // std::string queueType = "FqCoDelQueueDisc";
     std::string queueType = "FifoQueueDisc";
-    std::string onTimeMean = "10";
+    std::string onTimeMean = "15";
     std::string onTimeVar = "0.1";
     std::string offTimeMean = "0.2";
     std::string offTimeVar = "0.05";
@@ -328,7 +334,8 @@ main(int argc, char* argv[])
     }
     NS_LOG_DEBUG("inputName: " << inputName);
 
-    name = firstTcpTypeId + '-' + std::to_string(firstPolicyFirstParam) + '-' + std::to_string(firstPolicyFirstParam) + '-' +
+    name = firstTcpTypeId + '-' + std::to_string(firstPolicyFirstParam) + '-' + std::to_string(firstPolicySecondParam) + '-' +
+            secondTcpTypeId + '-' + std::to_string(secondPolicyFirstParam) + '-' + std::to_string(secondPolicySecondParam) + '-' +
             onTimeMean + '-' + onTimeVar + '-' + offTimeMean + '-' + offTimeVar + '-' +
             currentTime + '-' + std::to_string(startLine) + '-' + inputName;
 
@@ -346,6 +353,9 @@ main(int argc, char* argv[])
     Config::SetDefault("ns3::TcpComposite::FirstPolicyName", StringValue(firstTcpTypeId));
     Config::SetDefault("ns3::TcpComposite::FirstPolicyFirstParameter", DoubleValue(firstPolicyFirstParam));
     Config::SetDefault("ns3::TcpComposite::FirstPolicySecondParameter", DoubleValue(firstPolicySecondParam));
+    Config::SetDefault("ns3::TcpComposite::SecondPolicyName", StringValue(secondTcpTypeId));
+    Config::SetDefault("ns3::TcpComposite::SecondPolicyFirstParameter", DoubleValue(secondPolicyFirstParam));
+    Config::SetDefault("ns3::TcpComposite::SecondPolicySecondParameter", DoubleValue(secondPolicySecondParam));
     Config::SetDefault("ns3::TcpRxBuffer::TputOutputPath", StringValue(outputDir + name +"-tput"));
     // Config::SetDefault("ns3::TcpCubic::Beta", DoubleValue(beta));
     // Config::SetDefault("ns3::TcpCubic::C", DoubleValue(cubicC));

@@ -192,7 +192,7 @@ main(int argc, char* argv[])
     // LogComponentEnable("BulkSendApplication", LOG_LEVEL_LOGIC);
     // LogComponentEnable("OnOffApplication", LOG_LEVEL_DEBUG);
     // LogComponentEnable("TcpSocketBase", LOG_LEVEL_DEBUG);
-    // LogComponentEnable("TcpCubic", LOG_LEVEL_DEBUG);
+    // LogComponentEnable("TcpCubic", LOG_LEVEL_FUNCTION);
     // LogComponentEnable("Ipv4FlowProbe", LOG_LEVEL_DEBUG);
     // LogComponentEnable("TcpDctcp", LOG_LEVEL_INFO);
     // LogComponentEnable("TcpCongestionOps", LOG_LEVEL_FUNCTION);
@@ -208,7 +208,7 @@ main(int argc, char* argv[])
 
     std::string tcpTypeId = "TcpNewReno";
     std::string queueType = "FifoQueueDisc";
-    std::string onTimeMean = "1";
+    std::string onTimeMean = "15";
     std::string onTimeVar = "0.1";
     std::string offTimeMean = "0.2";
     std::string offTimeVar = "0.05";
@@ -216,8 +216,8 @@ main(int argc, char* argv[])
     std::string oneWayDelay = "10ms";
     bool queueUseEcn = false;
     Time ceThreshold = MilliSeconds(1);
-    std::string traceFile = "/mydata/ns3-traces/test-1.log";
-    std::string outputDir = "/mydata/output-traces/";
+    std::string traceFile = "./test-trace";
+    std::string outputDir = "./results/";
     int startLine = 0;
     uint32_t runNum = 0;
     uint32_t initialCwnd = 10;
