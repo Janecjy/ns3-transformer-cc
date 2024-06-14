@@ -5,6 +5,7 @@ results/
 *.patch
 *.rej
 *.ipynb
+test-trace
 
 *.o
 *.pyc
