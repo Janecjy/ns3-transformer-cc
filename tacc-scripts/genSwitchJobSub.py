@@ -17,11 +17,11 @@ exp_per_file = int(output_path_name.split('_')[-1])
 
 def run_job(run_time_seed, output_dir, start_cwnd_diff, first_policy, second_policy, file_name, om, ov, ofm, ofv):
     first_policy_type = first_policy.split('-')[0]
-    first_policy_first_par = float(first_policy.split('-')[1])
-    first_policy_second_par = float(first_policy.split('-')[2])
+    first_policy_first_par = first_policy.split('-')[1]
+    first_policy_second_par = first_policy.split('-')[2]
     second_policy_type = second_policy.split('-')[0]
-    second_policy_first_par = float(second_policy.split('-')[1])
-    second_policy_second_par = float(second_policy.split('-')[2])
+    second_policy_first_par = second_policy.split('-')[1]
+    second_policy_second_par = second_policy.split('-')[2]
     cmd = '/home1/09498/janechen/ns3-transformer-cc/ns3 run "scratch/scratch-simulator-switch --firstTcpTypeId='+first_policy_type+' --firstPolicyFirstParam='+first_policy_first_par+' --firstPolicySecondParam='+first_policy_second_par+' --secondTcpTypeId'+second_policy_type+' --secondPolicyFirstParam='+second_policy_first_par+' --secondPolicySecondParam='+second_policy_second_par+' --secondCwndDiff='+start_cwnd_diff+' --switchTime='+str(first_state_time_length)+' --stopTime='+str(first_state_time_length+second_state_time_length)+' --traceFile='+file_name+' --outputDir='+output_dir+'/ --onTimeMean='+om+' --onTimeVar='+ov+' --offTimeMean='+ofm+' --offTimeVar='+ofv+' --runNum='+str(run_time_seed)+'"'
     #+' --initialCwnd='+str(second_start_cwnd)+' --stopTime='+str(second_state_time_length)+' --traceFile='+tmp_bw_trace_path+' --outputDir='+output_dir+'/ --onTimeMean='+om+' --onTimeVar='+ov+' --offTimeMean='+ofm+' --offTimeVar='+ofv+' --runNum='+str(run_time_seed)+' --isSecondPolicy=true"'
     os.system(cmd)
