@@ -237,8 +237,8 @@ main(int argc, char* argv[])
     // LogComponentEnable("Ipv4FlowProbe", LOG_LEVEL_DEBUG);
     // LogComponentEnable("TcpDctcp", LOG_LEVEL_INFO);
     // LogComponentEnable("TcpCongestionOps", LOG_LEVEL_FUNCTION);
-    LogComponentEnable("TcpComposite", LOG_LEVEL_FUNCTION);
-    LogComponentEnable("TcpComposite", LOG_LEVEL_DEBUG);
+    // LogComponentEnable("TcpComposite", LOG_LEVEL_FUNCTION);
+    // LogComponentEnable("TcpComposite", LOG_LEVEL_DEBUG);
 
     // Naming the output directory using local system time
     time_t rawtime;
