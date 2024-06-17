@@ -3,38 +3,19 @@ import sys
 import random
 
 parent_dir = "/scratch/09498/janechen/"
-policy_list = ["NewReno", "Cubic"]
-file_limit = sys.argv[1]
+trace_dir = "/scratch/09498/janechen/ns3-traces/"
+exp_per_file = 20
 
 def main():
-    for policy in policy_list:
-        trace_dir = os.path.join(parent_dir, policy)
-        # print("trace_dir: ", trace_dir)
-        # root is the directory path, file is the file name
-        
-        # max_jobs=3; cur_jobs=0
-        # for ((i=0; i<6; i++)); do
-        #   # If true, wait until the next background job finishes to continue.
-        #   ((cur_jobs >= max_jobs)) && wait -n
-        #   # Increment the current number of jobs running.
-        #   ./j"$i" & ((++cur_jobs))
-        # done
-        # wait
-        print("max_jobs=48; cur_jobs=0")
-        for root, dirs, files in os.walk(trace_dir):
-            if files: #and (root.split("/")[-2] == "NewReno-1-2" or root.split("/")[-2] == "Cubic-0.7-0.4"):
-                file_count = len(files)
-                for i in range(int(file_limit)):
-                    file = files[random.randint(0, file_count-1)]
+    print("max_jobs=48; cur_jobs=0")
+    for root, dirs, files in os.walk(trace_dir):
+        if files:
+            for file in files:
+                for i in range(exp_per_file):
                     print("((cur_jobs >= max_jobs)) && wait -n")
-                    cmd = "python /home1/09498/janechen/ns3-transformer-cc/tacc-scripts/genSwitchJobSub.py " + root + " " + file + " " + "switch_output_avg_" + file_limit
+                    cmd = "python /home1/09498/janechen/ns3-transformer-cc/tacc-scripts/genSwitchJobSub.py " + root + " " + file + " " + "switch_output_avg_" + str(exp_per_file)
                     print(cmd+" & ((++cur_jobs))")
-                # for file in files:
-                #     print("((cur_jobs >= max_jobs)) && wait -n")
-                #     cmd = "python /home1/09498/janechen/ns3-transformer-cc/tacc-scripts/genSwitchJobSub.py " + root + " " + file
-                #     print(cmd+" & ((++cur_jobs))")
-                #     break
-        print("wait")
+    print("wait")
 
 if __name__ == "__main__":
     main()

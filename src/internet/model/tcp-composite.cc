@@ -54,6 +54,11 @@ TcpComposite::GetTypeId()
                           DoubleValue(20),
                           MakeDoubleAccessor(&TcpComposite::m_secondParSecond),
                           MakeDoubleChecker<double>())
+            .AddAttribute("SecondCwndDiff",
+                          "Difference between the cwnd of the two policies",
+                          IntegerValue(0),
+                          MakeIntegerAccessor(&TcpComposite::m_secondCwndDiff),
+                          MakeIntegerChecker<int>())
             .AddAttribute("FastConvergence",
                           "Enable (true) or disable (false) fast convergence",
                           BooleanValue(true),
@@ -180,7 +185,7 @@ TcpComposite::SlowStart(Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
     if (segmentsAcked >= 1)
     {
         tcb->m_cWnd += m_firstPar * tcb->m_segmentSize;
-        NS_LOG_INFO("In SlowStart, updated to cwnd " << tcb->m_cWnd << " ssthresh "
+        NS_LOG_INFO(Simulator::Now() << ": in NewReno SlowStart, updated to cwnd " << tcb->m_cWnd << " ssthresh "
                                                      << tcb->m_ssThresh);
         return segmentsAcked - 1;
     }
@@ -199,7 +204,7 @@ TcpComposite::CongestionAvoidance(Ptr<TcpSocketState> tcb, uint32_t segmentsAcke
             static_cast<double>(tcb->m_segmentSize * tcb->m_segmentSize) / tcb->m_cWnd.Get();
         adder = std::max(1.0, adder);
         tcb->m_cWnd += m_firstPar * static_cast<uint32_t>(adder);
-        NS_LOG_INFO("In CongAvoid, updated to cwnd " << tcb->m_cWnd << " ssthresh "
+        NS_LOG_INFO(Simulator::Now() << ": in NewReno CongAvoid, updated to cwnd " << tcb->m_cWnd << " ssthresh "
                                                      << tcb->m_ssThresh);
     }
 }
@@ -245,7 +250,7 @@ TcpComposite::IncreaseWindow(Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
             tcb->m_cWnd += segmentsAcked * tcb->m_segmentSize;
             segmentsAcked = 0;
 
-            NS_LOG_INFO("In SlowStart, updated to cwnd " << tcb->m_cWnd << " ssthresh "
+            NS_LOG_INFO(Simulator::Now() << ": in Cubic SlowStart, updated to cwnd " << tcb->m_cWnd << " ssthresh "
                                                          << tcb->m_ssThresh);
         }
 
@@ -263,11 +268,11 @@ TcpComposite::IncreaseWindow(Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
             {
                 tcb->m_cWnd += tcb->m_segmentSize;
                 m_cWndCnt -= cnt;
-                NS_LOG_INFO("In CongAvoid, updated to cwnd " << tcb->m_cWnd);
+                NS_LOG_INFO(Simulator::Now() << ": in Cubic CongAvoid, updated to cwnd " << tcb->m_cWnd);
             }
             else
             {
-                NS_LOG_INFO("Not enough segments have been ACKed to increment cwnd."
+                NS_LOG_INFO(Simulator::Now() << ": Cubic Not enough segments have been ACKed to increment cwnd."
                             "Until now "
                             << m_cWndCnt << " cnd " << cnt);
             }
@@ -288,6 +293,7 @@ TcpComposite::Init(Ptr<TcpSocketState> tcb)
                         &TcpComposite::SetSecondPar,
                         this,
                         m_secondParSecond);
+    Simulator::Schedule(Seconds(m_switchTime), &TcpComposite::ChangeCwnd, this, tcb, m_secondCwndDiff);
 }
 
 std::string
@@ -317,6 +323,13 @@ TcpComposite::SetSecondPar(double secondPar)
 {
     NS_LOG_DEBUG("Setting second parameter to " << secondPar);
     m_secondPar = secondPar;
+}
+
+void TcpComposite::ChangeCwnd(Ptr<TcpSocketState> tcb, int diff){
+    NS_LOG_FUNCTION(this << tcb << diff);
+    NS_LOG_DEBUG("Changing cwnd from " << tcb->m_cWnd);
+    tcb->m_cWnd += diff * tcb->m_segmentSize;
+    NS_LOG_DEBUG("Changing cwnd to " << tcb->m_cWnd);
 }
 
 void

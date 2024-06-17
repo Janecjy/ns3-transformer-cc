@@ -40,6 +40,7 @@ class TcpComposite : public TcpCongestionOps
     void SetPolicy(std::string policy);
     void SetFirstPar(double firstPar);
     void SetSecondPar(double secondPar);
+    void ChangeCwnd(Ptr<TcpSocketState> tcb, int diff);
 
     void IncreaseWindow(Ptr<TcpSocketState> tcb, uint32_t segmentsAcked) override;
     uint32_t GetSsThresh(Ptr<const TcpSocketState> tcb, uint32_t bytesInFlight) override;
@@ -66,6 +67,7 @@ class TcpComposite : public TcpCongestionOps
     std::string m_policy;
     double m_firstPar;
     double m_secondPar;
+    int m_secondCwndDiff;
 
     // Cubic-related Parameters
 

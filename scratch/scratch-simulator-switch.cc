@@ -237,7 +237,8 @@ main(int argc, char* argv[])
     // LogComponentEnable("Ipv4FlowProbe", LOG_LEVEL_DEBUG);
     // LogComponentEnable("TcpDctcp", LOG_LEVEL_INFO);
     // LogComponentEnable("TcpCongestionOps", LOG_LEVEL_FUNCTION);
-    // LogComponentEnable("TcpComposite", LOG_LEVEL_FUNCTION);
+    LogComponentEnable("TcpComposite", LOG_LEVEL_FUNCTION);
+    LogComponentEnable("TcpComposite", LOG_LEVEL_DEBUG);
 
     // Naming the output directory using local system time
     time_t rawtime;
@@ -248,18 +249,19 @@ main(int argc, char* argv[])
     strftime(buffer, sizeof(buffer), "%d-%m-%Y-%I-%M-%S", timeinfo);
     std::string currentTime(buffer);
 
-    std::string firstTcpTypeId = "TcpNewReno";
-    double firstPolicyFirstParam = 1;
-    double firstPolicySecondParam = 2;
-    // std::string firstTcpTypeId = "TcpCubic";
-    // double firstPolicyFirstParam = 0.7;
-    // double firstPolicySecondParam = 0.4;
-    // std::string secondTcpTypeId = "TcpNewReno";
-    // double secondPolicyFirstParam = 1;
-    // double secondPolicySecondParam = 2;
-    std::string secondTcpTypeId = "TcpCubic";
-    double secondPolicyFirstParam = 0.7;
-    double secondPolicySecondParam = 0.4;
+    // std::string firstTcpTypeId = "TcpNewReno";
+    // double firstPolicyFirstParam = 1;
+    // double firstPolicySecondParam = 2;
+    std::string firstTcpTypeId = "TcpCubic";
+    double firstPolicyFirstParam = 0.7;
+    double firstPolicySecondParam = 0.4;
+    std::string secondTcpTypeId = "TcpNewReno";
+    double secondPolicyFirstParam = 1;
+    double secondPolicySecondParam = 2;
+    int secondCwndDiff = 0;
+    // std::string secondTcpTypeId = "TcpCubic";
+    // double secondPolicyFirstParam = 0.7;
+    // double secondPolicySecondParam = 0.4;
     // std::string queueType = "FqCoDelQueueDisc";
     std::string queueType = "FifoQueueDisc";
     std::string onTimeMean = "15";
@@ -267,7 +269,7 @@ main(int argc, char* argv[])
     std::string offTimeMean = "0.2";
     std::string offTimeVar = "0.05";
     Time stopTime = Seconds(10);
-    Time switchTime = Seconds(5);
+    uint32_t switchTime = 5;
     std::string oneWayDelay = "10ms";
     bool queueUseEcn = false;
     Time ceThreshold = MilliSeconds(1);
@@ -286,14 +288,20 @@ main(int argc, char* argv[])
     // uint32_t renoBeta = 2;
 
     CommandLine cmd(__FILE__);
-    cmd.AddValue("tcpTypeId",
-                 "Transport protocol to use: TcpLinuxReno, TcpVegas, TcpDctcp, TcpCubic, TcpBbr",
+    cmd.AddValue("firstTcpTypeId",
+                 "Transport protocol to use: TcpNewReno, TcpCubic",
                  firstTcpTypeId);
     cmd.AddValue("firstPolicyFirstParam", "First parameter for the first policy", firstPolicyFirstParam);
     cmd.AddValue("firstPolicySecondParam", "Second parameter for the first policy", firstPolicySecondParam);
+    cmd.AddValue("secondTcpTypeId", "Transport protocol to use: TcpNewReno, TcpCubic",
+                 secondTcpTypeId);
+    cmd.AddValue("secondPolicyFirstParam", "First parameter for the second policy", secondPolicyFirstParam);
+    cmd.AddValue("secondPolicySecondParam", "Second parameter for the second policy", secondPolicySecondParam);
+    cmd.AddValue("secondCwndDiff", "Difference in initial cwnd of second policy and the end cwnd of first policy", secondCwndDiff);
     cmd.AddValue("queueType",
                  "bottleneck queue type to use: CoDelQueueDisc, FqCoDelQueueDisc",
                  queueType);
+    cmd.AddValue("switchTime", "Time to switch from first policy to second policy", switchTime);
     cmd.AddValue("stopTime",
                  "Stop time for applications / simulation time will be stopTime + 1",
                  stopTime);
@@ -356,7 +364,9 @@ main(int argc, char* argv[])
     Config::SetDefault("ns3::TcpComposite::SecondPolicyName", StringValue(secondTcpTypeId));
     Config::SetDefault("ns3::TcpComposite::SecondPolicyFirstParameter", DoubleValue(secondPolicyFirstParam));
     Config::SetDefault("ns3::TcpComposite::SecondPolicySecondParameter", DoubleValue(secondPolicySecondParam));
+    Config::SetDefault("ns3::TcpComposite::SecondCwndDiff", IntegerValue(secondCwndDiff));
     Config::SetDefault("ns3::TcpRxBuffer::TputOutputPath", StringValue(outputDir + name +"-tput"));
+    Config::SetDefault("ns3::TcpComposite::SwitchTime", UintegerValue(switchTime));
     // Config::SetDefault("ns3::TcpCubic::Beta", DoubleValue(beta));
     // Config::SetDefault("ns3::TcpCubic::C", DoubleValue(cubicC));
     // Config::SetDefault("ns3::TcpNewReno::RenoAlpha", DoubleValue(alpha));

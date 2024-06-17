@@ -1,114 +1,65 @@
 import os
 import sys
 import random
+import datetime
 
 parent_dir = "/scratch/09498/janechen/"
 # policy_full_name_list = ["Cubic-0.5-0.4", "Cubic-0.5-0.8", "Cubic-0.7-0.4", "Cubic-0.7-0.8", "Cubic-0.8-0.4", "Cubic-0.8-0.8", "Cubic-0.9-0.4", "Cubic-0.9-0.8", "NewReno-1.0-1.0", "NewReno-1.0-3.0", "NewReno-1.0-4.0", "NewReno-1-2", "NewReno-1.5-1.0", "NewReno-1.5-2.0", "NewReno-1.5-3.0", "NewReno-1.5-4.0", "NewReno-2.0-1.0", "NewReno-2.0-2.0", "NewReno-2.0-3.0", "NewReno-2.0-4.0"]
-policy_full_name_list = ["Cubic-0.7-0.4", "NewReno-1-2"]
-bw_trace_dir = os.path.join(parent_dir, "ns3-traces")
-first_state_length = 50
+policy_full_name_list = ["TcpCubic-0.7-0.4", "TcpNewReno-1-2"]
+on_off_config = [["1", "0.1", "0.2", "0.05"], ["1", "0.5", "0.2", "0.05"], ["5", "0.1", "0.1", "0.1"], ["2", "0.5", "0.2", "0.1"],  ["0.1", "0.05", "0.02", "0.01"]]
+first_state_time_length = 3 # in terms of seconds
 second_state_time_length = 1 # in terms of seconds
 root = sys.argv[1]
 file = sys.argv[2]
 output_path_name = sys.argv[3]
 output_parent_dir = os.path.join(parent_dir, output_path_name)
-run_num = 20
+exp_per_file = int(output_path_name.split('_')[-1])
+# run_num = 20 # get reward average of 20 runs
 
-
-def copy_state(output_dir, state_trace_path, second_start_line):
-    state_out_path = os.path.join(output_dir, "state.txt")
-    # print("state_out_path: ", state_out_path)
-    tmp_cwnd = 0
-    second_start_time = -1
-    with open(state_out_path, "w") as out:
-        with open(state_trace_path) as state_trace:
-            start_write = False
-            second_start_time = -1
-            tmp_cwnd = -1
-            # check if state_trace is longer than second_start_line
-            # if len(state_trace.readlines()) <= second_start_line:
-            #     # print(state_trace_path, second_start_line)
-            #     exit(0)
-            for i, line in enumerate(state_trace):
-                if i == second_start_line - first_state_length:
-                    start_write = True
-                if start_write:
-                    out.write(line)
-                    tmp_cwnd = int(line.split(',')[1])
-                if i == second_start_line:
-                    second_start_time = float(line.split(',')[0])
-                    # print("second_start_line: %d, second_start_time: %f", second_start_line, second_start_time)
-                    return second_start_time, tmp_cwnd
-    return second_start_time, tmp_cwnd
-
-def copy_bw_trace(output_dir, bw_trace_path, first_start_line, second_start_time):
-    tmp_bw_trace_path = os.path.join(output_dir, "tmp_bw_trace.txt")
-    # print("bw_trace_path: ", bw_trace_path)
-    # print("tmp_bw_trace_path: ", tmp_bw_trace_path)
-    tmp_buf = ""
-    with open(tmp_bw_trace_path, "w") as f:
-        with open(bw_trace_path) as bw_trace:
-            for i, line in enumerate(bw_trace):
-                t = float(line.split(' ')[0])/1000
-                if t < second_start_time:
-                    tmp_buf = line
-                if t >= second_start_time:
-                    if tmp_buf:
-                        f.write(str(second_start_time*1000) + " " + tmp_buf.split(' ')[1])
-                        tmp_buf = ""
-                    f.write(line)
-                if t > second_start_time + second_state_time_length:
-                    return tmp_bw_trace_path
-
-def run_job(output_dir, second_start_cwnd, run_policy, tmp_bw_trace_path, om, ov, ofm, ofv):
-    run_time_seed = random.randint(0, 100000)
-    if run_policy.split('-')[0] == "Cubic":
-        type = "TcpCubic"
-        cubic_beta = run_policy.split('-')[1]
-        cubic_c = run_policy.split('-')[2]
-        cmd = '/home1/09498/janechen/ns3-transformer-cc/ns3 run "scratch/scratch-simulator --tcpTypeId='+type+' --beta='+cubic_beta+' --cubicC='+cubic_c+' --initialCwnd='+str(second_start_cwnd)+' --stopTime='+str(second_state_time_length)+' --traceFile='+tmp_bw_trace_path+' --outputDir='+output_dir+'/ --onTimeMean='+om+' --onTimeVar='+ov+' --offTimeMean='+ofm+' --offTimeVar='+ofv+' --runNum='+str(run_time_seed)+' --isSecondPolicy=true"'
-    else:
-        type = "TcpNewReno"
-        reno_alpha = run_policy.split('-')[1]
-        reno_beta = run_policy.split('-')[2]
-        cmd = '/home1/09498/janechen/ns3-transformer-cc/ns3 run "scratch/scratch-simulator --tcpTypeId='+type+' --alpha='+reno_alpha+' --renoBeta='+reno_beta+' --initialCwnd='+str(second_start_cwnd)+' --stopTime='+str(second_state_time_length)+' --traceFile='+tmp_bw_trace_path+' --outputDir='+output_dir+'/ --onTimeMean='+om+' --onTimeVar='+ov+' --offTimeMean='+ofm+' --offTimeVar='+ofv+' --runNum='+str(run_time_seed)+' --isSecondPolicy=true"'
-    # print(cmd)
+def run_job(run_time_seed, output_dir, start_cwnd_diff, first_policy, second_policy, file_name, om, ov, ofm, ofv):
+    first_policy_type = first_policy.split('-')[0]
+    first_policy_first_par = float(first_policy.split('-')[1])
+    first_policy_second_par = float(first_policy.split('-')[2])
+    second_policy_type = second_policy.split('-')[0]
+    second_policy_first_par = float(second_policy.split('-')[1])
+    second_policy_second_par = float(second_policy.split('-')[2])
+    cmd = '/home1/09498/janechen/ns3-transformer-cc/ns3 run "scratch/scratch-simulator-switch --firstTcpTypeId='+first_policy_type+' --firstPolicyFirstParam='+first_policy_first_par+' --firstPolicySecondParam='+first_policy_second_par+' --secondTcpTypeId'+second_policy_type+' --secondPolicyFirstParam='+second_policy_first_par+' --secondPolicySecondParam='+second_policy_second_par+' --secondCwndDiff='+start_cwnd_diff+' --switchTime='+str(first_state_time_length)+' --stopTime='+str(first_state_time_length+second_state_time_length)+' --traceFile='+file_name+' --outputDir='+output_dir+'/ --onTimeMean='+om+' --onTimeVar='+ov+' --offTimeMean='+ofm+' --offTimeVar='+ofv+' --runNum='+str(run_time_seed)+'"'
+    #+' --initialCwnd='+str(second_start_cwnd)+' --stopTime='+str(second_state_time_length)+' --traceFile='+tmp_bw_trace_path+' --outputDir='+output_dir+'/ --onTimeMean='+om+' --onTimeVar='+ov+' --offTimeMean='+ofm+' --offTimeVar='+ofv+' --runNum='+str(run_time_seed)+' --isSecondPolicy=true"'
     os.system(cmd)
 
-def gen_data(parent_dir, file_name):
-    policy = parent_dir.split("/")[-2]
-    transport = parent_dir.split("/")[-1]
-    line_num_index = 11
-    om_index = 1
-    if len(file_name.split('-')) > 17:
-        line_num_index = 13
-        om_index = 3
-    first_start_line = file_name.split('-')[line_num_index] # get the bandwidth start line in the trace for the first policy
-    # print("first_start_line: ", first_start_line)
-    second_start_line = random.randint(first_state_length+1, 350) # create the line number in the state trace for the second policy to start from
-    output_dir = os.path.join(output_parent_dir, policy, transport, file_name+"-"+str(second_start_line))
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-    else:
-        if len(os.listdir(output_dir)) > 0 and "state.txt" in os.listdir(output_dir) and "tmp_bw_trace.txt" in os.listdir(output_dir):
+def find_start_line_max(file_path):
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
+        
+    line_num = len(lines)
+    return line_num - first_state_time_length - second_state_time_length
+
+def gen_data(file_path):
+    file_name = file_path.split('/')[-1]
+    start_line_max = find_start_line_max(file_path)
+    for exp in range(exp_per_file):
+        start_line = random.randint(0, start_line_max)
+        first_policy = random.choice(policy_full_name_list)
+            
+        output_dir = os.path.join(output_parent_dir, first_policy, file_name+"-"+str(start_line)+"-"+"{date:%Y-%m-%d_%H:%M:%S}".format( date=datetime.datetime.now()))
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        else:
+            print("output_dir "+output_dir+" already exists")
             return
-    bw_trace_path = os.path.join(bw_trace_dir, "-".join(file_name.split('-')[line_num_index+1:]))
-    state_trace_path = os.path.join(parent_dir, file_name)
-    # print("state_trace_path: ", state_trace_path)
-    second_start_time, first_end_cwnd = copy_state(output_dir, state_trace_path, second_start_line)
-    if first_end_cwnd > 0:
-        tmp_bw_trace_path = copy_bw_trace(output_dir, bw_trace_path, first_start_line, second_start_time)
-        om = file_name.split('-')[om_index]
-        ov = file_name.split('-')[om_index+1]
-        ofm = file_name.split('-')[om_index+2]
-        ofv = file_name.split('-')[om_index+3]
-        for run_policy in policy_full_name_list:
-            for second_start_cwnd in [max(1, first_end_cwnd-5), first_end_cwnd, first_end_cwnd+5]: #range(max(1, first_end_cwnd-5), first_end_cwnd+5):
-                for _ in range(run_num):
-                    run_job(output_dir, second_start_cwnd, run_policy, tmp_bw_trace_path, om, ov, ofm, ofv)
+        on_off = random.choice(on_off_config)
+        om = on_off[0]
+        ov = on_off[1]
+        ofm = on_off[2]
+        ofv = on_off[3]
+        run_time_seed = random.randint(0, 100000)
+        for second_policy in policy_full_name_list:
+            for start_cwnd_diff in [0, -5, 5]: #range(max(1, first_end_cwnd-5), first_end_cwnd+5):
+                # for _ in range(run_num):
+                run_job(run_time_seed, output_dir, start_cwnd_diff, first_policy, second_policy, file_name, om, ov, ofm, ofv)
 
 def main():
-    gen_data(root, file)
+    gen_data(file)
     
 if __name__ == "__main__":
     main()
