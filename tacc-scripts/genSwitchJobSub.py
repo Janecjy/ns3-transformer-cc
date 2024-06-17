@@ -53,7 +53,7 @@ def gen_data(file_path):
         ofv = on_off[3]
         run_time_seed = random.randint(0, 100000)
         for second_policy in policy_full_name_list:
-            for start_cwnd_diff in [0, -5, 5]: #range(max(1, first_end_cwnd-5), first_end_cwnd+5):
+            for start_cwnd_diff in ['0', '-5', '5']: #range(max(1, first_end_cwnd-5), first_end_cwnd+5):
                 # for _ in range(run_num):
                 run_job(run_time_seed, output_dir, start_cwnd_diff, first_policy, second_policy, file_name, om, ov, ofm, ofv)
 
