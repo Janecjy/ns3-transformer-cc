@@ -22,7 +22,7 @@ def run_job(run_time_seed, output_dir, start_cwnd_diff, first_policy, second_pol
     second_policy_type = second_policy.split('-')[0]
     second_policy_first_par = second_policy.split('-')[1]
     second_policy_second_par = second_policy.split('-')[2]
-    cmd = '/home1/09498/janechen/ns3-transformer-cc/ns3 run "scratch/scratch-simulator-switch --firstTcpTypeId='+first_policy_type+' --firstPolicyFirstParam='+first_policy_first_par+' --firstPolicySecondParam='+first_policy_second_par+' --secondTcpTypeId'+second_policy_type+' --secondPolicyFirstParam='+second_policy_first_par+' --secondPolicySecondParam='+second_policy_second_par+' --secondCwndDiff='+start_cwnd_diff+' --switchTime='+str(first_state_time_length)+' --stopTime='+str(first_state_time_length+second_state_time_length)+' --traceFile='+file_name+' --outputDir='+output_dir+'/ --onTimeMean='+om+' --onTimeVar='+ov+' --offTimeMean='+ofm+' --offTimeVar='+ofv+' --runNum='+str(run_time_seed)+'"'
+    cmd = '/home1/09498/janechen/ns3-transformer-cc/ns3 run "scratch/scratch-simulator-switch --firstTcpTypeId='+first_policy_type+' --firstPolicyFirstParam='+first_policy_first_par+' --firstPolicySecondParam='+first_policy_second_par+' --secondTcpTypeId='+second_policy_type+' --secondPolicyFirstParam='+second_policy_first_par+' --secondPolicySecondParam='+second_policy_second_par+' --secondCwndDiff='+start_cwnd_diff+' --switchTime='+str(first_state_time_length)+' --stopTime='+str(first_state_time_length+second_state_time_length)+' --traceFile='+file_name+' --outputDir='+output_dir+'/ --onTimeMean='+om+' --onTimeVar='+ov+' --offTimeMean='+ofm+' --offTimeVar='+ofv+' --runNum='+str(run_time_seed)+'"'
     #+' --initialCwnd='+str(second_start_cwnd)+' --stopTime='+str(second_state_time_length)+' --traceFile='+tmp_bw_trace_path+' --outputDir='+output_dir+'/ --onTimeMean='+om+' --onTimeVar='+ov+' --offTimeMean='+ofm+' --offTimeVar='+ofv+' --runNum='+str(run_time_seed)+' --isSecondPolicy=true"'
     os.system(cmd)
 
@@ -55,7 +55,7 @@ def gen_data(file_path):
         for second_policy in policy_full_name_list:
             for start_cwnd_diff in ['0', '-5', '5']: #range(max(1, first_end_cwnd-5), first_end_cwnd+5):
                 # for _ in range(run_num):
-                run_job(run_time_seed, output_dir, start_cwnd_diff, first_policy, second_policy, file_name, om, ov, ofm, ofv)
+                run_job(run_time_seed, output_dir, start_cwnd_diff, first_policy, second_policy, file_path, om, ov, ofm, ofv)
 
 def main():
     gen_data(file)
