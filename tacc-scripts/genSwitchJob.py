@@ -4,7 +4,7 @@ import random
 
 parent_dir = "/scratch/09498/janechen/"
 trace_dir = "/scratch/09498/janechen/ns3-traces/"
-exp_per_file = 5
+exp_per_file = sys.argv[1]
 
 def main():
     print("max_jobs=48; cur_jobs=0")
