@@ -193,6 +193,23 @@ ChangeBottleneckBw(std::string bw)
     Config::Set("/NodeList/3/DeviceList/0/$ns3::PointToPointNetDevice/DataRate", StringValue(bw));
 }
 
+void ResetSeed(uint32_t secondRunNum, Ipv4InterfaceContainer& ir1, NodeContainer& sender, Time stopTime, uint32_t port, std::string onTimeMean, std::string onTimeVar, std::string offTimeMean, std::string offTimeVar, uint32_t switchTime){
+    ns3::RngSeedManager::SetRun(secondRunNum);
+    OnOffHelper source1("ns3::TcpSocketFactory", InetSocketAddress(ir1.GetAddress(1), port));
+    source1.SetAttribute("OnTime",
+                        StringValue("ns3::NormalRandomVariable[Mean=" + onTimeMean +
+                                    "|Variance=" + onTimeVar + "]"));
+    source1.SetAttribute("OffTime",
+                        StringValue("ns3::NormalRandomVariable[Mean=" + offTimeMean +
+                                    "|Variance=" + offTimeVar + "]"));
+    source1.SetAttribute("MaxBytes", UintegerValue(0));
+    source1.SetAttribute("DataRate", DataRateValue(DataRate("10Mb/s")));
+    source1.SetAttribute("PacketSize", UintegerValue(1448));
+    ApplicationContainer sourceApps1 = source1.Install(sender.Get(0));
+    sourceApps1.Start(Seconds(switchTime));
+    sourceApps1.Stop(stopTime);
+}
+
 static Ptr<OutputStreamWrapper> nextRxStream;  
 
 // static void
@@ -231,7 +248,7 @@ main(int argc, char* argv[])
     // NS_LOG_UNCOND("Scratch Simulator for transformer-cc");
     // LogComponentEnable("ScratchSimulatorSwitch", LOG_LEVEL_LOGIC);
     // LogComponentEnable("BulkSendApplication", LOG_LEVEL_LOGIC);
-    // LogComponentEnable("OnOffApplication", LOG_LEVEL_DEBUG);
+    LogComponentEnable("OnOffApplication", LOG_LEVEL_LOGIC);
     // LogComponentEnable("TcpSocketBase", LOG_LEVEL_DEBUG);
     // LogComponentEnable("TcpCubic", LOG_LEVEL_DEBUG);
     // LogComponentEnable("Ipv4FlowProbe", LOG_LEVEL_DEBUG);
@@ -278,6 +295,8 @@ main(int argc, char* argv[])
     int startLine = 0;
     uint32_t runNum = 0;
     uint32_t initialCwnd = 10;
+    bool randomSeedSwitch = false;
+    uint32_t secondRunNum = 0;
 
     // // Cubic parameters
     // double beta = 0.7;
@@ -327,6 +346,8 @@ main(int argc, char* argv[])
     // cmd.AddValue("renoBeta", "NewReno beta parameter for multiplicative decrease", renoBeta);
     cmd.AddValue("runNum", "Run number for randomness seed", runNum);
     cmd.AddValue("initialCwnd", "Initial congestion window size", initialCwnd);
+    cmd.AddValue("randomSeedSwitch", "Switch randomness seed for second run", randomSeedSwitch);
+    cmd.AddValue("secondRunNum", "Run number for second run", secondRunNum);
     cmd.Parse(argc, argv);
     NS_LOG_DEBUG("Using " << firstTcpTypeId << " as the transport protocol");
 
@@ -343,7 +364,7 @@ main(int argc, char* argv[])
     NS_LOG_DEBUG("inputName: " << inputName);
 
     name = firstTcpTypeId + '-' + std::to_string(firstPolicyFirstParam) + '-' + std::to_string(firstPolicySecondParam) + '-' +
-            secondTcpTypeId + '-' + std::to_string(secondPolicyFirstParam) + '-' + std::to_string(secondPolicySecondParam) + '-' +
+            secondTcpTypeId + '-' + std::to_string(secondPolicyFirstParam) + '-' + std::to_string(secondPolicySecondParam) + '-' + '-' +
             onTimeMean + '-' + onTimeVar + '-' + offTimeMean + '-' + offTimeVar + '-' +
             currentTime + '-' + std::to_string(startLine) + '-' + inputName;
 
@@ -445,9 +466,30 @@ main(int argc, char* argv[])
     sourceApps.Start(Seconds(0.1));
     // Hook trace source after application starts
     Simulator::Schedule(Seconds(0.1) + MilliSeconds(1), &ConnectTracer);
+    sourceApps.Stop(Seconds(switchTime));
     // Simulator::Schedule(Seconds(0.1) + MilliSeconds(1),
     //                             &TraceNextRx);
-    sourceApps.Stop(stopTime);
+    ns3::RngSeedManager::SetRun(secondRunNum);
+    OnOffHelper source1("ns3::TcpSocketFactory", InetSocketAddress(ir1.GetAddress(1), port));
+    source1.SetAttribute("OnTime",
+                        StringValue("ns3::NormalRandomVariable[Mean=" + onTimeMean +
+                                    "|Variance=" + onTimeVar + "]"));
+    source1.SetAttribute("OffTime",
+                        StringValue("ns3::NormalRandomVariable[Mean=" + offTimeMean +
+                                    "|Variance=" + offTimeVar + "]"));
+    source1.SetAttribute("MaxBytes", UintegerValue(0));
+    source1.SetAttribute("DataRate", DataRateValue(DataRate("10Mb/s")));
+    source1.SetAttribute("PacketSize", UintegerValue(1448));
+    ApplicationContainer sourceApps1 = source1.Install(sender.Get(0));
+    sourceApps1.Start(Seconds(switchTime));
+    sourceApps1.Stop(stopTime);
+
+    // if (randomSeedSwitch) {
+    //     sourceApps.Stop(Seconds(switchTime));
+    //     Simulator::Schedule(Seconds(switchTime), &ResetSeed, secondRunNum, ir1, sender, stopTime, port, onTimeMean, onTimeVar, offTimeMean, offTimeVar, switchTime);
+    // }
+    // else
+    //     sourceApps.Stop(stopTime);
 
     // Install application on the receiver
     PacketSinkHelper sink("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), port));
