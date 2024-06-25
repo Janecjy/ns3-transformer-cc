@@ -105,16 +105,10 @@ class CustomDataset(Dataset):
                             policy_name = f.split('-')[3] + '-' + f.split('-')[4] + '-' + f.split('-')[5] + '-' + str(cwnd_diff)
                             rewards[policy_name] = self.get_reward(f, reward_lines)
         
-        print(len(saved_state))
-        for state in saved_state:
-            print(len(state))
-        print(torch.tensor(saved_state).shape)
         state = torch.tensor(saved_state).view(1, 32, 13) / self.normalizer
         state[state != state] = nan_token  # Replace NaN values with nan_token
 
         label = self.get_label(rewards)
-        # print(len(self.data))
-        print(state, label, rewards)
         return state, label, rewards
     
     def get_tput(self, file_path):
