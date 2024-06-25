@@ -99,8 +99,9 @@ class CustomDataset(Dataset):
                         saved_state = current_state
                     else:
                         if current_state != saved_state:
-                            print(f"State mismatch found in file: {f}")
+                            print(f"State mismatch found in file: {os.path.join(root_dir, f)}")
                             # Handle the discrepancy as needed
+                            return None
                         else:
                             policy_name = f.split('-')[3] + '-' + f.split('-')[4] + '-' + f.split('-')[5] + '-' + str(cwnd_diff)
                             rewards[policy_name] = self.get_reward(f, reward_lines)
