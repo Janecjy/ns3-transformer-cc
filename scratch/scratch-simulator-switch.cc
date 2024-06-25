@@ -40,8 +40,8 @@ uint32_t prev = 0;
 Time prevTime = Seconds(0);
 uint32_t currentCwnd = 0;
 uint32_t ssThresh = 0;
-uint32_t g_firstBytesReceived = 0; //!< First received packet size.
-uint32_t g_firstBytesLastReceived = 0;     //!< First sent packet size.
+uint32_t g_firstBytesReceived = 0;     //!< First received packet size.
+uint32_t g_firstBytesLastReceived = 0; //!< First sent packet size.
 double pacingRate = 0;
 std::vector<uint64_t> delay;
 uint32_t rto = 0;
@@ -58,12 +58,12 @@ void
 OutputStats()
 {
     g_firstBytesLastReceived = g_firstBytesReceived;
-    double throughput = g_firstBytesReceived * 8 / measureInterval / 1e6;
+    // double throughput = g_firstBytesReceived * 8 / measureInterval / 1e6;
     double avgDelay = accumulate(delay.begin(), delay.end(), 0.0) / delay.size();
     output << Simulator::Now().GetSeconds() << ", " << currentCwnd << ", " << ssThresh << ", "
-           << throughput << ", " << pacingRate << ", " << avgDelay << ", " << rto << ", "
-           << dropObserved << ", " << markObserved << ", " << queueLength << ", " << bytesInFlight
-           << ", " << tx << ", " << unAck << std::endl;
+           << pacingRate << ", " << avgDelay << ", " << rto << ", " << dropObserved << ", "
+           << markObserved << ", " << queueLength << ", " << bytesInFlight << ", " << tx << ", "
+           << unAck << std::endl;
     g_firstBytesReceived = 0;
     delay.clear();
     dropObserved = 0;
@@ -83,7 +83,8 @@ OutputStats()
 //     g_firstBytesReceived += packet->GetSize();
 // }
 
-void RecvTputTracer(uint32_t oldval, uint32_t newval)
+void
+RecvTputTracer(uint32_t oldval, uint32_t newval)
 {
     std::cout << "RecvTputTracer newval: " << newval << "\n";
     g_firstBytesReceived = newval - g_firstBytesLastReceived;
@@ -193,7 +194,7 @@ ChangeBottleneckBw(std::string bw)
     Config::Set("/NodeList/3/DeviceList/0/$ns3::PointToPointNetDevice/DataRate", StringValue(bw));
 }
 
-static Ptr<OutputStreamWrapper> nextRxStream;  
+static Ptr<OutputStreamWrapper> nextRxStream;
 
 // static void
 // NextRxTracer(std::string context, SequenceNumber32 old [[maybe_unused]], SequenceNumber32 nextRx)
@@ -213,9 +214,11 @@ static Ptr<OutputStreamWrapper> nextRxStream;
 // }
 
 // void
-// ChangeCongestionControl(std::string tcpTypeId, double firstPolicyFirstParam, double firstPolicySecondParam)
+// ChangeCongestionControl(std::string tcpTypeId, double firstPolicyFirstParam, double
+// firstPolicySecondParam)
 // {
-//     // Config::Set("/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/PolicyName", StringValue(tcpTypeId));
+//     // Config::Set("/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/PolicyName",
+//     StringValue(tcpTypeId));
 //     // Config::Set("/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/FirstPolicyParameter",
 //     //             DoubleValue(firstPolicyFirstParam));
 //     // Config::Set("/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/SecondPolicyParameter",
@@ -291,13 +294,24 @@ main(int argc, char* argv[])
     cmd.AddValue("firstTcpTypeId",
                  "Transport protocol to use: TcpNewReno, TcpCubic",
                  firstTcpTypeId);
-    cmd.AddValue("firstPolicyFirstParam", "First parameter for the first policy", firstPolicyFirstParam);
-    cmd.AddValue("firstPolicySecondParam", "Second parameter for the first policy", firstPolicySecondParam);
-    cmd.AddValue("secondTcpTypeId", "Transport protocol to use: TcpNewReno, TcpCubic",
+    cmd.AddValue("firstPolicyFirstParam",
+                 "First parameter for the first policy",
+                 firstPolicyFirstParam);
+    cmd.AddValue("firstPolicySecondParam",
+                 "Second parameter for the first policy",
+                 firstPolicySecondParam);
+    cmd.AddValue("secondTcpTypeId",
+                 "Transport protocol to use: TcpNewReno, TcpCubic",
                  secondTcpTypeId);
-    cmd.AddValue("secondPolicyFirstParam", "First parameter for the second policy", secondPolicyFirstParam);
-    cmd.AddValue("secondPolicySecondParam", "Second parameter for the second policy", secondPolicySecondParam);
-    cmd.AddValue("secondCwndDiff", "Difference in initial cwnd of second policy and the end cwnd of first policy", secondCwndDiff);
+    cmd.AddValue("secondPolicyFirstParam",
+                 "First parameter for the second policy",
+                 secondPolicyFirstParam);
+    cmd.AddValue("secondPolicySecondParam",
+                 "Second parameter for the second policy",
+                 secondPolicySecondParam);
+    cmd.AddValue("secondCwndDiff",
+                 "Difference in initial cwnd of second policy and the end cwnd of first policy",
+                 secondCwndDiff);
     cmd.AddValue("queueType",
                  "bottleneck queue type to use: CoDelQueueDisc, FqCoDelQueueDisc",
                  queueType);
@@ -342,10 +356,12 @@ main(int argc, char* argv[])
     }
     NS_LOG_DEBUG("inputName: " << inputName);
 
-    name = firstTcpTypeId + '-' + std::to_string(firstPolicyFirstParam) + '-' + std::to_string(firstPolicySecondParam) + '-' +
-            secondTcpTypeId + '-' + std::to_string(secondPolicyFirstParam) + '-' + std::to_string(secondPolicySecondParam) + '-' +
-            onTimeMean + '-' + onTimeVar + '-' + offTimeMean + '-' + offTimeVar + '-' +
-            currentTime + '-' + std::to_string(startLine) + '-' + inputName;
+    name = firstTcpTypeId + '-' + std::to_string(firstPolicyFirstParam) + '-' +
+           std::to_string(firstPolicySecondParam) + '-' + secondTcpTypeId + '-' +
+           std::to_string(secondPolicyFirstParam) + '-' + std::to_string(secondPolicySecondParam) +
+           '-' + std::to_string(secondCwndDiff) + '-' + onTimeMean + '-' + onTimeVar + '-' +
+           offTimeMean + '-' + offTimeVar + '-' + currentTime + '-' + std::to_string(startLine) +
+           '-' + inputName;
 
     Config::SetDefault("ns3::TcpL4Protocol::SocketType", StringValue("ns3::TcpComposite"));
     // Config::SetDefault("ns3::TcpL4Protocol::SocketType",
@@ -359,13 +375,17 @@ main(int argc, char* argv[])
     Config::SetDefault("ns3::TcpSocket::InitialCwnd", UintegerValue(initialCwnd));
     Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue(packetSize));
     Config::SetDefault("ns3::TcpComposite::FirstPolicyName", StringValue(firstTcpTypeId));
-    Config::SetDefault("ns3::TcpComposite::FirstPolicyFirstParameter", DoubleValue(firstPolicyFirstParam));
-    Config::SetDefault("ns3::TcpComposite::FirstPolicySecondParameter", DoubleValue(firstPolicySecondParam));
+    Config::SetDefault("ns3::TcpComposite::FirstPolicyFirstParameter",
+                       DoubleValue(firstPolicyFirstParam));
+    Config::SetDefault("ns3::TcpComposite::FirstPolicySecondParameter",
+                       DoubleValue(firstPolicySecondParam));
     Config::SetDefault("ns3::TcpComposite::SecondPolicyName", StringValue(secondTcpTypeId));
-    Config::SetDefault("ns3::TcpComposite::SecondPolicyFirstParameter", DoubleValue(secondPolicyFirstParam));
-    Config::SetDefault("ns3::TcpComposite::SecondPolicySecondParameter", DoubleValue(secondPolicySecondParam));
+    Config::SetDefault("ns3::TcpComposite::SecondPolicyFirstParameter",
+                       DoubleValue(secondPolicyFirstParam));
+    Config::SetDefault("ns3::TcpComposite::SecondPolicySecondParameter",
+                       DoubleValue(secondPolicySecondParam));
     Config::SetDefault("ns3::TcpComposite::SecondCwndDiff", IntegerValue(secondCwndDiff));
-    Config::SetDefault("ns3::TcpRxBuffer::TputOutputPath", StringValue(outputDir + name +"-tput"));
+    Config::SetDefault("ns3::TcpRxBuffer::TputOutputPath", StringValue(outputDir + name + "-tput"));
     Config::SetDefault("ns3::TcpComposite::SwitchTime", UintegerValue(switchTime));
     // Config::SetDefault("ns3::TcpCubic::Beta", DoubleValue(beta));
     // Config::SetDefault("ns3::TcpCubic::C", DoubleValue(cubicC));
@@ -429,7 +449,7 @@ main(int argc, char* argv[])
 
     // Select sender side port
     uint16_t port = 50001;
-    
+
     // Install the OnOff application on the sender
     OnOffHelper source("ns3::TcpSocketFactory", InetSocketAddress(ir1.GetAddress(1), port));
     source.SetAttribute("OnTime",
@@ -469,7 +489,7 @@ main(int argc, char* argv[])
     // Open files for writing outputs
     output.open(outputDir + name, std::ios::out);
 
-    output << "Time, currentCwnd, ssThres, throughput, pacingRate, avgDelay, rto, dropObserved, "
+    output << "Time, currentCwnd, ssThres, pacingRate, avgDelay, rto, dropObserved, "
               "markObserved, "
               "queueLength, bytesInFlight, tx, unAck"
            << std::endl;
