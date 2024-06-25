@@ -225,4 +225,4 @@ root_dir = sys.argv[1]
 dataset = CustomDataset(root_dir, normalizer)
 
 # Save dataset
-# dataset.save('/scratch/09498/janechen/cc-decider-dataset.pth')
+dataset.save('/scratch/09498/janechen/cc-decider-dataset-'+root_dir.split('/')[-1]+'.pth')
