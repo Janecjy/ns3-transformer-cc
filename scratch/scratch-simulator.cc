@@ -176,12 +176,16 @@ ConnectTracer()
 }
 
 void
-ChangeBottleneckBw(std::string bw)
+ChangeBottleneckBw(std::string bw, Ptr<QueueDisc> qd)
 {
     NS_LOG_LOGIC("Changing bottleneck bandwidth to " << bw << " at "
                                                      << Simulator::Now().GetMilliSeconds() << "ms");
     Config::Set("/NodeList/2/DeviceList/1/$ns3::PointToPointNetDevice/DataRate", StringValue(bw));
     Config::Set("/NodeList/3/DeviceList/0/$ns3::PointToPointNetDevice/DataRate", StringValue(bw));
+    int bandwidth = std::stoi(bw); // Convert string to integer
+    int queueSize = static_cast<int>(std::floor((bandwidth * 20.0) / 1000.0 / 1448.0 / 8.0));
+    qd->SetAttribute("MaxSize", QueueSizeValue(QueueSize(std::to_string(queueSize)+"p")));
+    NS_LOG_LOGIC("Queue size set to " << queueSize);
 }
 
 int
@@ -425,7 +429,7 @@ main(int argc, char* argv[])
         }
         Simulator::Schedule(MilliSeconds(t - start_t - Simulator::Now().GetMilliSeconds()),
                             &ChangeBottleneckBw,
-                            std::to_string(available_bw) + "bps");
+                            std::to_string(available_bw) + "bps", qd.Get(0));
     }
 
     Simulator::Stop(stopTime + TimeStep(1));
