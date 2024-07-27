@@ -28,6 +28,7 @@
 #include "ns3/simulator.h"
 #include "ns3/socket.h"
 #include "ns3/uinteger.h"
+#include "ns3/tcp-header.h"
 
 namespace ns3
 {
@@ -720,6 +721,10 @@ void
 QueueDisc::DropBeforeEnqueue(Ptr<const QueueDiscItem> item, const char* reason)
 {
     NS_LOG_FUNCTION(this << item << reason);
+
+    TcpHeader tcpHeader;
+    item->GetPacket()->PeekHeader(tcpHeader);
+    NS_LOG_LOGIC("At time " << Simulator::Now().GetSeconds() << " DropBeforeEnqueue " << tcpHeader.GetSequenceNumber() << " " << tcpHeader.GetAckNumber() << " at " << Simulator::Now().GetSeconds());
 
     m_stats.nTotalDroppedPackets++;
     m_stats.nTotalDroppedBytes += item->GetSize();

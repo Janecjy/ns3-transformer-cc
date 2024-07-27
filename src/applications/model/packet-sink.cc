@@ -34,6 +34,7 @@
 #include "ns3/trace-source-accessor.h"
 #include "ns3/udp-socket-factory.h"
 #include "ns3/udp-socket.h"
+#include "ns3/tcp-header.h"
 
 namespace ns3
 {
@@ -201,6 +202,9 @@ PacketSink::HandleRead(Ptr<Socket> socket)
     Address localAddress;
     while ((packet = socket->RecvFrom(from)))
     {
+        TcpHeader tcpHeader;
+        packet->PeekHeader(tcpHeader);
+        NS_LOG_LOGIC("HandleRead " << tcpHeader.GetSequenceNumber() << " at " << Simulator::Now().GetSeconds());
         if (packet->GetSize() == 0)
         { // EOF
             break;

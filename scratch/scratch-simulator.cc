@@ -191,6 +191,18 @@ ChangeBottleneckBw(std::string bw, Ptr<QueueDisc> qd)
 int
 main(int argc, char* argv[])
 {
+    LogComponentEnable("ScratchSimulator", LOG_LEVEL_LOGIC);
+    // LogComponentEnable("BulkSendApplication", LOG_LEVEL_LOGIC);
+    // LogComponentEnable("OnOffApplication", LOG_LEVEL_DEBUG);
+    LogComponentEnable("TcpSocketBase", LOG_LEVEL_LOGIC);
+    LogComponentEnable("TcpL4Protocol", LOG_LEVEL_LOGIC);
+    LogComponentEnable("FifoQueueDisc", LOG_LEVEL_LOGIC);
+    LogComponentEnable("TcpRxBuffer", LOG_LEVEL_LOGIC);
+    LogComponentEnable("PacketSink", LOG_LEVEL_LOGIC);
+    LogComponentEnable("Socket", LOG_LEVEL_LOGIC);
+    LogComponentEnable("Ipv4RawSocketImpl", LOG_LEVEL_LOGIC);
+    LogComponentEnable("PointToPointNetDevice", LOG_LEVEL_LOGIC);
+    LogComponentEnable("QueueDisc", LOG_LEVEL_LOGIC);
     // NS_LOG_UNCOND("Scratch Simulator for transformer-cc");
     // LogComponentEnable("ScratchSimulator", LOG_LEVEL_DEBUG);
     // LogComponentEnable("BulkSendApplication", LOG_LEVEL_LOGIC);

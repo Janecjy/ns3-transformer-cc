@@ -22,6 +22,8 @@
 #include "ns3/drop-tail-queue.h"
 #include "ns3/log.h"
 #include "ns3/object-factory.h"
+#include "ns3/tcp-header.h"
+#include "ns3/simulator.h"
 
 namespace ns3
 {
@@ -61,7 +63,10 @@ bool
 FifoQueueDisc::DoEnqueue(Ptr<QueueDiscItem> item)
 {
     NS_LOG_FUNCTION(this << item);
-
+    TcpHeader tcpHeader;
+    item->GetPacket()->PeekHeader(tcpHeader);
+    NS_LOG_LOGIC("DoEnqueue " << tcpHeader.GetSequenceNumber() << " with max size " << GetMaxSize() << " at " << Simulator::Now().GetSeconds());
+    NS_LOG_LOGIC("Current size " << GetCurrentSize() << " at " << Simulator::Now().GetSeconds());
     if (GetCurrentSize() + item > GetMaxSize())
     {
         NS_LOG_LOGIC("Queue full -- dropping pkt");
@@ -92,6 +97,11 @@ FifoQueueDisc::DoDequeue()
         NS_LOG_LOGIC("Queue empty");
         return nullptr;
     }
+
+    TcpHeader tcpHeader;
+    item->GetPacket()->PeekHeader(tcpHeader);
+    NS_LOG_LOGIC("DoDequeue " << tcpHeader.GetSequenceNumber() << " at " << Simulator::Now().GetSeconds());
+
 
     return item;
 }

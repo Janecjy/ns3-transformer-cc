@@ -1292,7 +1292,7 @@ TcpSocketBase::IsValidTcpSegment(const SequenceNumber32 seq,
     else if (tcpPayloadSize > 0 && OutOfRange(seq, seq + tcpPayloadSize))
     {
         // Discard fully out of range data packets
-        NS_LOG_WARN("At state " << TcpStateName[m_state] << " received packet of seq [" << seq
+        NS_LOG_LOGIC("At state " << TcpStateName[m_state] << " received packet of seq [" << seq
                                 << ":" << seq + tcpPayloadSize << ") out of range ["
                                 << m_tcb->m_rxBuffer->NextRxSequence() << ":"
                                 << m_tcb->m_rxBuffer->MaxRxSequence() << ")");
@@ -1314,6 +1314,9 @@ TcpSocketBase::DoForwardUp(Ptr<Packet> packet, const Address& fromAddress, const
     TcpHeader tcpHeader;
     packet->RemoveHeader(tcpHeader);
     SequenceNumber32 seq = tcpHeader.GetSequenceNumber();
+    NS_LOG_LOGIC("DoForwardUp Received packet of seq [" << seq << "] at " << Simulator::Now().GetSeconds()
+                                                         << " from " << fromAddress << " to "
+                                                         << toAddress);
 
     if (m_state == ESTABLISHED && !(tcpHeader.GetFlags() & TcpHeader::RST))
     {
@@ -1333,7 +1336,7 @@ TcpSocketBase::DoForwardUp(Ptr<Packet> packet, const Address& fromAddress, const
     }
 
     m_rxTrace(packet, tcpHeader, this);
-
+    
     if (tcpHeader.GetFlags() & TcpHeader::SYN)
     {
         /* The window field in a segment where the SYN bit is set (i.e., a <SYN>
@@ -1823,6 +1826,8 @@ TcpSocketBase::ReceivedAck(Ptr<Packet> packet, const TcpHeader& tcpHeader)
 
     SequenceNumber32 ackNumber = tcpHeader.GetAckNumber();
     SequenceNumber32 oldHeadSequence = m_txBuffer->HeadSequence();
+
+    NS_LOG_LOGIC("Received ACK " << ackNumber << " with seq " << tcpHeader.GetSequenceNumber() << " in state " << TcpStateName[m_state] << " at time " << Simulator::Now().GetSeconds());
 
     if (ackNumber < oldHeadSequence)
     {
@@ -2829,7 +2834,7 @@ TcpSocketBase::SendEmptyPacket(uint8_t flags)
         {
             AddOptionSack(header);
         }
-        NS_LOG_INFO("Sending a pure ACK, acking seq " << m_tcb->m_rxBuffer->NextRxSequence());
+        NS_LOG_INFO("Sending a pure ACK, acking seq " << m_tcb->m_rxBuffer->NextRxSequence() << " at time " << Simulator::Now().GetSeconds());
     }
 
     m_txTrace(p, header, this);
@@ -3117,6 +3122,8 @@ uint32_t
 TcpSocketBase::SendDataPacket(SequenceNumber32 seq, uint32_t maxSize, bool withAck)
 {
     NS_LOG_FUNCTION(this << seq << maxSize << withAck);
+    NS_LOG_LOGIC("SendDataPacket called with seq " << seq << " maxSize " << maxSize
+                                                  << " withAck " << withAck << " at time " << Simulator::Now().GetSeconds());
 
     bool isStartOfTransmission = BytesInFlight() == 0U;
     TcpTxItem* outItem = m_txBuffer->CopyFromSequence(maxSize, seq);
@@ -3474,6 +3481,7 @@ TcpSocketBase::AvailableWindow() const
 {
     uint32_t win = Window();             // Number of bytes allowed to be outstanding
     uint32_t inflight = BytesInFlight(); // Number of outstanding bytes
+    NS_LOG_LOGIC("At time " << Simulator::Now().GetSeconds() << " AvailableWindow: win=" << win << " inflight=" << inflight << " available_win=" << win - inflight);
     return (inflight > win) ? 0 : win - inflight;
 }
 
@@ -3522,8 +3530,8 @@ void
 TcpSocketBase::ReceivedData(Ptr<Packet> p, const TcpHeader& tcpHeader)
 {
     NS_LOG_FUNCTION(this << tcpHeader);
-    NS_LOG_DEBUG("Data segment, seq=" << tcpHeader.GetSequenceNumber()
-                                      << " pkt size=" << p->GetSize());
+    NS_LOG_LOGIC("ReceivedData seq=" << tcpHeader.GetSequenceNumber()
+                                      << " pkt size=" << p->GetSize() << " at time " << Simulator::Now().GetSeconds());
 
     // Put into Rx buffer
     SequenceNumber32 expectedSeq = m_tcb->m_rxBuffer->NextRxSequence();
@@ -3635,6 +3643,7 @@ TcpSocketBase::EstimateRtt(const TcpHeader& tcpHeader)
                 Ptr<const TcpOptionTS> ts;
                 ts = DynamicCast<const TcpOptionTS>(tcpHeader.GetOption(TcpOption::TS));
                 m = TcpOptionTS::ElapsedTimeFromTsValue(ts->GetEcho());
+                NS_LOG_LOGIC("seq=" << tcpHeader.GetSequenceNumber() << ", ack=" << ackSeq << " RTT calculated from TcpOption::TS " << m.GetSeconds() << " at " << Simulator::Now().GetSeconds());
                 if (m.IsZero())
                 {
                     NS_LOG_LOGIC("TcpSocketBase::EstimateRtt - RTT calculated from TcpOption::TS "
@@ -3644,6 +3653,7 @@ TcpSocketBase::EstimateRtt(const TcpHeader& tcpHeader)
             }
             else
             {
+                NS_LOG_LOGIC("seq=" << tcpHeader.GetSequenceNumber() << ", ack=" << ackSeq << " RTT calculated from elapsed time " << h.time.GetSeconds() << " at " << Simulator::Now().GetSeconds());
                 m = Simulator::Now() - h.time; // Elapsed time
             }
         }
@@ -3667,6 +3677,8 @@ TcpSocketBase::EstimateRtt(const TcpHeader& tcpHeader)
         m_rto = Max(m_rtt->GetEstimate() + Max(m_clockGranularity, m_rtt->GetVariation() * 4),
                     m_minRto);
         m_tcb->m_lastRtt = m_rtt->GetEstimate();
+        NS_LOG_LOGIC("RTT estimate " << m_tcb->m_lastRtt << " at "
+                                      << Simulator::Now().GetSeconds());
         m_tcb->m_minRtt = std::min(m_tcb->m_lastRtt.Get(), m_tcb->m_minRtt);
         NS_LOG_INFO(this << m_tcb->m_lastRtt << m_tcb->m_minRtt);
     }

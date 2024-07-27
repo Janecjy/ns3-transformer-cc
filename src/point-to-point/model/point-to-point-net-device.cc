@@ -29,6 +29,7 @@
 #include "ns3/simulator.h"
 #include "ns3/trace-source-accessor.h"
 #include "ns3/uinteger.h"
+#include "ns3/tcp-header.h"
 
 namespace ns3
 {
@@ -224,6 +225,7 @@ PointToPointNetDevice::SetDataRate(DataRate bps)
 {
     NS_LOG_FUNCTION(this);
     m_bps = bps;
+    NS_LOG_LOGIC("Data rate is " << bps.GetBitRate() << " bps");
 }
 
 void
@@ -255,11 +257,17 @@ PointToPointNetDevice::TransmitStart(Ptr<Packet> p)
     NS_LOG_LOGIC("Schedule TransmitCompleteEvent in " << txCompleteTime.As(Time::S));
     Simulator::Schedule(txCompleteTime, &PointToPointNetDevice::TransmitComplete, this);
 
+    TcpHeader tcpHeader;
+    p->PeekHeader(tcpHeader);
+    NS_LOG_LOGIC("TransmitStart " << tcpHeader.GetSequenceNumber() << " at " << Simulator::Now().GetSeconds());
+
     bool result = m_channel->TransmitStart(p, this, txTime);
     if (!result)
     {
         m_phyTxDropTrace(p);
     }
+    NS_LOG_LOGIC("TransmitStart result " << tcpHeader.GetSequenceNumber() << " at " << Simulator::Now().GetSeconds());
+
     return result;
 }
 
@@ -278,6 +286,11 @@ PointToPointNetDevice::TransmitComplete()
     m_txMachineState = READY;
 
     NS_ASSERT_MSG(m_currentPkt, "PointToPointNetDevice::TransmitComplete(): m_currentPkt zero");
+
+    TcpHeader tcpHeader;
+    m_currentPkt->PeekHeader(tcpHeader);
+    NS_LOG_LOGIC("TransmitComplete " << tcpHeader.GetSequenceNumber() << " at " << Simulator::Now().GetSeconds());
+
 
     m_phyTxEndTrace(m_currentPkt);
     m_currentPkt = nullptr;
@@ -513,7 +526,7 @@ bool
 PointToPointNetDevice::Send(Ptr<Packet> packet, const Address& dest, uint16_t protocolNumber)
 {
     NS_LOG_FUNCTION(this << packet << dest << protocolNumber);
-    NS_LOG_LOGIC("p=" << packet << ", dest=" << &dest);
+    NS_LOG_LOGIC("PointToPointNetDevice::Send p=" << packet << ", dest=" << &dest << " at time " << Simulator::Now().GetSeconds());
     NS_LOG_LOGIC("UID is " << packet->GetUid());
 
     //

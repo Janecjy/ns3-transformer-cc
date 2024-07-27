@@ -174,7 +174,7 @@ class CustomDataset(Dataset):
         line_count = 0
         tput_max_index = 0
         d_min = 20
-        delta = 0.1
+        delta = 5
         for line in reward_lines:
             t = float(line.split(',')[0])
             tput = float(line.split(',')[-1])

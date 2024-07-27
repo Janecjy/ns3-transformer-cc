@@ -24,6 +24,7 @@
 #include "node.h"
 #include "packet.h"
 #include "socket-factory.h"
+#include "ns3/simulator.h"
 
 #include "ns3/log.h"
 
@@ -305,6 +306,7 @@ Socket::NotifyDataRecv()
     if (!m_receivedData.IsNull())
     {
         m_receivedData(this);
+        NS_LOG_LOGIC("Data received at time " << Simulator::Now().GetSeconds());
     }
 }
 

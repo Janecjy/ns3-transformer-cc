@@ -137,6 +137,7 @@ void
 QueueLengthTracer(uint32_t oldval, uint32_t newval)
 {
     queueLength = newval;
+    NS_LOG_LOGIC("Queue length: " << newval << " at time " << Simulator::Now().GetSeconds());
 }
 
 void
@@ -186,12 +187,16 @@ ConnectTracer()
 }
 
 void
-ChangeBottleneckBw(std::string bw)
+ChangeBottleneckBw(std::string bw, Ptr<QueueDisc> qd)
 {
     NS_LOG_LOGIC("Changing bottleneck bandwidth to " << bw << " at "
                                                      << Simulator::Now().GetMilliSeconds() << "ms");
     Config::Set("/NodeList/2/DeviceList/1/$ns3::PointToPointNetDevice/DataRate", StringValue(bw));
     Config::Set("/NodeList/3/DeviceList/0/$ns3::PointToPointNetDevice/DataRate", StringValue(bw));
+    int bandwidth = std::stoi(bw); // Convert string to integer
+    int queueSize = static_cast<int>(std::floor((bandwidth * 80.0) / 1000.0 / 1448.0 / 8.0));
+    qd->SetAttribute("MaxSize", QueueSizeValue(QueueSize(std::to_string(queueSize)+"p")));
+    NS_LOG_LOGIC("Queue size set to " << queueSize);
 }
 
 static Ptr<OutputStreamWrapper> nextRxStream;
@@ -232,10 +237,18 @@ int
 main(int argc, char* argv[])
 {
     // NS_LOG_UNCOND("Scratch Simulator for transformer-cc");
-    // LogComponentEnable("ScratchSimulatorSwitch", LOG_LEVEL_LOGIC);
+    LogComponentEnable("ScratchSimulatorSwitch", LOG_LEVEL_LOGIC);
     // LogComponentEnable("BulkSendApplication", LOG_LEVEL_LOGIC);
     // LogComponentEnable("OnOffApplication", LOG_LEVEL_DEBUG);
-    // LogComponentEnable("TcpSocketBase", LOG_LEVEL_DEBUG);
+    LogComponentEnable("TcpSocketBase", LOG_LEVEL_LOGIC);
+    LogComponentEnable("TcpL4Protocol", LOG_LEVEL_LOGIC);
+    LogComponentEnable("FifoQueueDisc", LOG_LEVEL_LOGIC);
+    LogComponentEnable("TcpRxBuffer", LOG_LEVEL_LOGIC);
+    LogComponentEnable("PacketSink", LOG_LEVEL_LOGIC);
+    LogComponentEnable("Socket", LOG_LEVEL_LOGIC);
+    LogComponentEnable("Ipv4RawSocketImpl", LOG_LEVEL_LOGIC);
+    LogComponentEnable("PointToPointNetDevice", LOG_LEVEL_LOGIC);
+    LogComponentEnable("QueueDisc", LOG_LEVEL_LOGIC);
     // LogComponentEnable("TcpCubic", LOG_LEVEL_DEBUG);
     // LogComponentEnable("Ipv4FlowProbe", LOG_LEVEL_DEBUG);
     // LogComponentEnable("TcpDctcp", LOG_LEVEL_INFO);
@@ -273,7 +286,7 @@ main(int argc, char* argv[])
     std::string offTimeVar = "0.05";
     Time stopTime = Seconds(10);
     uint32_t switchTime = 5;
-    std::string oneWayDelay = "10ms";
+    std::string oneWayDelay = "40ms";
     bool queueUseEcn = false;
     Time ceThreshold = MilliSeconds(1);
     std::string traceFile = "./test-trace";
@@ -396,7 +409,7 @@ main(int argc, char* argv[])
     Config::SetDefault("ns3::TcpSocketBase::UseEcn", StringValue("Off"));
 
     Config::SetDefault("ns3::DropTailQueue<Packet>::MaxSize", QueueSizeValue(QueueSize("1p")));
-    Config::SetDefault(queueType + "::MaxSize", QueueSizeValue(QueueSize("20p")));
+    Config::SetDefault(queueType + "::MaxSize", QueueSizeValue(QueueSize("7p")));
 
     NodeContainer sender;
     NodeContainer receiver;
@@ -430,7 +443,7 @@ main(int argc, char* argv[])
     // Configure the root queue discipline
     TrafficControlHelper tch;
     tch.SetRootQueueDisc(queueType);
-    tch.SetQueueLimits("ns3::DynamicQueueLimits", "HoldTime", StringValue("1ms"));
+    // tch.SetQueueLimits("ns3::DynamicQueueLimits", "HoldTime", StringValue("1ms"));
 
     // Assign IP addresses
     Ipv4AddressHelper ipv4;
@@ -512,7 +525,7 @@ main(int argc, char* argv[])
         }
         Simulator::Schedule(MilliSeconds(t - start_t - Simulator::Now().GetMilliSeconds()),
                             &ChangeBottleneckBw,
-                            std::to_string(available_bw) + "bps");
+                            std::to_string(available_bw) + "bps", qd.Get(0));
     }
 
     // TypeId firstTcpTypeId = TcpComposite::GetTypeId();

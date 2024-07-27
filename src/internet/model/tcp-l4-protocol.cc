@@ -405,7 +405,7 @@ TcpL4Protocol::PacketReceived(Ptr<Packet> packet,
                                   << incomingTcpHeader.GetSequenceNumber() << " ack "
                                   << incomingTcpHeader.GetAckNumber() << " flags "
                                   << TcpHeader::FlagsToString(incomingTcpHeader.GetFlags())
-                                  << " data size " << packet->GetSize());
+                                  << " data size " << packet->GetSize() << " at time " << Simulator::Now().GetSeconds());
 
     if (!incomingTcpHeader.IsChecksumOk())
     {
@@ -595,7 +595,7 @@ TcpL4Protocol::SendPacketV4(Ptr<Packet> packet,
     NS_LOG_LOGIC("TcpL4Protocol " << this << " sending seq " << outgoing.GetSequenceNumber()
                                   << " ack " << outgoing.GetAckNumber() << " flags "
                                   << TcpHeader::FlagsToString(outgoing.GetFlags()) << " data size "
-                                  << packet->GetSize());
+                                  << packet->GetSize() << " at time " << Simulator::Now().GetSeconds());
     // XXX outgoingHeader cannot be logged
 
     TcpHeader outgoingHeader = outgoing;

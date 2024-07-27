@@ -164,7 +164,7 @@ TcpRxBuffer::Add(Ptr<Packet> p, const TcpHeader& tcph)
     SequenceNumber32 headSeq = tcph.GetSequenceNumber();
     SequenceNumber32 tailSeq = headSeq + SequenceNumber32(pktSize);
     NS_LOG_LOGIC("Add pkt " << p << " len=" << pktSize << " seq=" << headSeq
-                            << ", when NextRxSeq=" << m_nextRxSeq << ", buffsize=" << m_size);
+                            << ", when NextRxSeq=" << m_nextRxSeq << ", buffsize=" << m_size << " at time " << Simulator::Now().GetSeconds());
 
     // Trim packet to fit Rx window specification
     if (headSeq < m_nextRxSeq)
@@ -227,14 +227,6 @@ TcpRxBuffer::Add(Ptr<Packet> p, const TcpHeader& tcph)
     // Count p->GetSize() bytes as available
     // m_receivedBytes = m_receivedBytes + p->GetSize();
     // open file for throughput output
-    std::ofstream outFile(m_tputOutputPath, std::ios::app);
-    if (!outFile.is_open())
-    {
-        NS_LOG_ERROR("Error opening file " << m_tputOutputPath);
-    } else {
-        outFile << Simulator::Now().GetSeconds() << ", " << p->GetSize() << std::endl;
-        outFile.close();
-    }
         
     if (headSeq > m_nextRxSeq)
     {
@@ -264,6 +256,14 @@ TcpRxBuffer::Add(Ptr<Packet> p, const TcpHeader& tcph)
     { // Account for the FIN packet
         ++m_nextRxSeq;
     };
+    std::ofstream outFile(m_tputOutputPath, std::ios::app);
+    if (!outFile.is_open())
+    {
+        NS_LOG_ERROR("Error opening file " << m_tputOutputPath);
+    } else {
+        outFile << Simulator::Now().GetSeconds() << ", " << p->GetSize() << std::endl;
+        outFile.close();
+    }
     return true;
 }
 
