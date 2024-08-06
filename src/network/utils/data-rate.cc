@@ -298,6 +298,7 @@ Time
 DataRate::CalculateBitsTxTime(uint32_t bits) const
 {
     NS_LOG_FUNCTION(this << bits);
+    NS_LOG_LOGIC("Data rate m_bps: " << m_bps << ", time: " << Seconds(int64x64_t(bits) / m_bps));
     return Seconds(int64x64_t(bits) / m_bps);
 }
 

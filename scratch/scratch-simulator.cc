@@ -195,14 +195,15 @@ main(int argc, char* argv[])
     // LogComponentEnable("BulkSendApplication", LOG_LEVEL_LOGIC);
     // LogComponentEnable("OnOffApplication", LOG_LEVEL_DEBUG);
     LogComponentEnable("TcpSocketBase", LOG_LEVEL_LOGIC);
-    LogComponentEnable("TcpL4Protocol", LOG_LEVEL_LOGIC);
+    // LogComponentEnable("TcpL4Protocol", LOG_LEVEL_LOGIC);
     LogComponentEnable("FifoQueueDisc", LOG_LEVEL_LOGIC);
-    LogComponentEnable("TcpRxBuffer", LOG_LEVEL_LOGIC);
-    LogComponentEnable("PacketSink", LOG_LEVEL_LOGIC);
-    LogComponentEnable("Socket", LOG_LEVEL_LOGIC);
-    LogComponentEnable("Ipv4RawSocketImpl", LOG_LEVEL_LOGIC);
+    // LogComponentEnable("TcpRxBuffer", LOG_LEVEL_LOGIC);
+    // LogComponentEnable("PacketSink", LOG_LEVEL_LOGIC);
+    // LogComponentEnable("Socket", LOG_LEVEL_LOGIC);
+    // LogComponentEnable("Ipv4RawSocketImpl", LOG_LEVEL_LOGIC);
     LogComponentEnable("PointToPointNetDevice", LOG_LEVEL_LOGIC);
     LogComponentEnable("QueueDisc", LOG_LEVEL_LOGIC);
+    LogComponentEnable("DataRate", LOG_LEVEL_LOGIC);
     // NS_LOG_UNCOND("Scratch Simulator for transformer-cc");
     // LogComponentEnable("ScratchSimulator", LOG_LEVEL_DEBUG);
     // LogComponentEnable("BulkSendApplication", LOG_LEVEL_LOGIC);
@@ -313,8 +314,8 @@ main(int argc, char* argv[])
     // The maximum send buffer size is set to 41943040 bytes (40MB) and the
     // maximum receive buffer size is set to 62914560 bytes (60MB) in the Linux
     // kernel. The same buffer sizes are used as default in this example.
-    Config::SetDefault("ns3::TcpSocket::SndBufSize", UintegerValue(4194304));
-    Config::SetDefault("ns3::TcpSocket::RcvBufSize", UintegerValue(6291456));
+    Config::SetDefault("ns3::TcpSocket::SndBufSize", UintegerValue(41943040));
+    Config::SetDefault("ns3::TcpSocket::RcvBufSize", UintegerValue(62914560));
     Config::SetDefault("ns3::TcpSocket::InitialCwnd", UintegerValue(initialCwnd));
     Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue(packetSize));
     Config::SetDefault("ns3::TcpCubic::Beta", DoubleValue(beta));
@@ -344,7 +345,7 @@ main(int argc, char* argv[])
     bottleneckLink.SetChannelAttribute("Delay", StringValue(oneWayDelay));
 
     PointToPointHelper edgeLink;
-    edgeLink.SetDeviceAttribute("DataRate", StringValue("100Mbps"));
+    edgeLink.SetDeviceAttribute("DataRate", StringValue("500Mbps"));
     edgeLink.SetChannelAttribute("Delay", StringValue("0ms"));
 
     // Create NetDevice containers
@@ -390,7 +391,7 @@ main(int argc, char* argv[])
                         StringValue("ns3::NormalRandomVariable[Mean=" + offTimeMean +
                                     "|Variance=" + offTimeVar + "]"));
     source.SetAttribute("MaxBytes", UintegerValue(0));
-    source.SetAttribute("DataRate", DataRateValue(DataRate("10Mb/s")));
+    source.SetAttribute("DataRate", DataRateValue(DataRate("250Mb/s")));
     source.SetAttribute("PacketSize", UintegerValue(1448));
     ApplicationContainer sourceApps = source.Install(sender.Get(0));
     sourceApps.Start(Seconds(0.1));
