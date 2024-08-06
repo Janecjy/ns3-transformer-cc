@@ -183,7 +183,7 @@ ChangeBottleneckBw(std::string bw, Ptr<QueueDisc> qd)
     Config::Set("/NodeList/2/DeviceList/1/$ns3::PointToPointNetDevice/DataRate", StringValue(bw));
     Config::Set("/NodeList/3/DeviceList/0/$ns3::PointToPointNetDevice/DataRate", StringValue(bw));
     int bandwidth = std::stoi(bw); // Convert string to integer
-    int queueSize = static_cast<int>(std::floor((bandwidth * 20.0) / 1000.0 / 1448.0 / 8.0));
+    int queueSize = static_cast<int>(std::ceil((bandwidth * 20.0) / 1000.0 / 1448.0 / 8.0));
     qd->SetAttribute("MaxSize", QueueSizeValue(QueueSize(std::to_string(queueSize)+"p")));
     NS_LOG_LOGIC("Queue size set to " << queueSize);
 }
