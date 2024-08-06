@@ -332,7 +332,7 @@ main(int argc, char* argv[])
     bottleneckLink.SetChannelAttribute("Delay", StringValue(oneWayDelay));
 
     PointToPointHelper edgeLink;
-    edgeLink.SetDeviceAttribute("DataRate", StringValue("100Mbps"));
+    edgeLink.SetDeviceAttribute("DataRate", StringValue("250Mbps"));
     edgeLink.SetChannelAttribute("Delay", StringValue("0ms"));
 
     // Create NetDevice containers
@@ -378,7 +378,7 @@ main(int argc, char* argv[])
                         StringValue("ns3::NormalRandomVariable[Mean=" + offTimeMean +
                                     "|Variance=" + offTimeVar + "]"));
     source.SetAttribute("MaxBytes", UintegerValue(0));
-    source.SetAttribute("DataRate", DataRateValue(DataRate("10Mb/s")));
+    source.SetAttribute("DataRate", DataRateValue(DataRate("250Mb/s")));
     source.SetAttribute("PacketSize", UintegerValue(1448));
     ApplicationContainer sourceApps = source.Install(sender.Get(0));
     sourceApps.Start(Seconds(0.1));
