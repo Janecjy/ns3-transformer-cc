@@ -9,13 +9,14 @@ def process_file(input_path, output_path, scaler_factor):
             outfile.write(f"{timestamp} {scaled_bandwidth}\n")
 
 def main():
-    if len(sys.argv) != 2:
+    if len(sys.argv) != 3:
         print("Usage: python scaleTrace.py <scaler_factor>")
         sys.exit(1)
 
-    scaler_factor = float(sys.argv[1])
-    input_dir = '/scratch/09498/janechen/ns3-traces'
-    output_dir = f'/scratch/09498/janechen/ns3-traces-{scaler_factor}x'
+    base_dir = '/scratch/09498/janechen/'
+    input_dir = base_dir+sys.argv[1]
+    scaler_factor = float(sys.argv[2])
+    output_dir = +f'ns3-traces-{scaler_factor}x'
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
