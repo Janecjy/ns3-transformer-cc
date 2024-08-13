@@ -286,18 +286,29 @@ main(int argc, char* argv[])
     {
         name = tcpTypeId + '-' + std::to_string(beta) + '-' + std::to_string(cubicC) + '-' +
                onTimeMean + '-' + onTimeVar + '-' + offTimeMean + '-' + offTimeVar + '-' +
-               currentTime + '-' + std::to_string(startLine) + '-' + inputName;
+               std::to_string(runNum) + '-' + std::to_string(startLine) + '-' + inputName;
     } else if (tcpTypeId == "TcpNewReno") {
         name = tcpTypeId + '-' + std::to_string(alpha) + '-' + std::to_string(renoBeta) + '-' +
                onTimeMean + '-' + onTimeVar + '-' + offTimeMean + '-' + offTimeVar + '-' +
-               currentTime + '-' + std::to_string(startLine) + '-' + inputName;
+               std::to_string(runNum) + '-' + std::to_string(startLine) + '-' + inputName;
     }
     else
         name = tcpTypeId + '-' + onTimeMean + '-' + onTimeVar + '-' + offTimeMean + '-' +
-               offTimeVar + '-' + currentTime + '-' + std::to_string(startLine) + '-' + inputName;
+               offTimeVar + '-' + std::to_string(runNum) + '-' + std::to_string(startLine) + '-' + inputName;
 
     Config::SetDefault("ns3::TcpL4Protocol::SocketType", StringValue("ns3::" + tcpTypeId));
     std::cerr << "Name is: " << name << std::endl;
+
+    std::filesystem::path outputFolder(outputDir);
+    for (const auto& entry : std::filesystem::directory_iterator(outputFolder))
+    {
+        std::string existingFileName = entry.path().filename().string();
+        if (existingFileName == name)
+        {
+            std::cerr << "File with similar name exists: " << existingFileName << std::endl;
+            return 0;
+        }
+    }
 
     // The maximum send buffer size is set to 41943040 bytes (40MB) and the
     // maximum receive buffer size is set to 62914560 bytes (60MB) in the Linux
