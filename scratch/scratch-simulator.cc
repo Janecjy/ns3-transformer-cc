@@ -297,7 +297,6 @@ main(int argc, char* argv[])
                offTimeVar + '-' + std::to_string(runNum) + '-' + std::to_string(startLine) + '-' + inputName;
 
     Config::SetDefault("ns3::TcpL4Protocol::SocketType", StringValue("ns3::" + tcpTypeId));
-    std::cerr << "Name is: " << name << std::endl;
 
     std::filesystem::path outputFolder(outputDir);
     for (const auto& entry : std::filesystem::directory_iterator(outputFolder))
@@ -309,6 +308,8 @@ main(int argc, char* argv[])
             return 0;
         }
     }
+
+    std::cerr << "Name is: " << name << std::endl;
 
     // The maximum send buffer size is set to 41943040 bytes (40MB) and the
     // maximum receive buffer size is set to 62914560 bytes (60MB) in the Linux
