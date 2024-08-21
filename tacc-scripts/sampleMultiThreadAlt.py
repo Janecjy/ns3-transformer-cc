@@ -97,35 +97,36 @@ def form_dataset_mod(filelist, context_len, prediction_len, input_dim=13, num_th
     mod_data = torch.transpose(mod_data, 1, 2)
     return mod_data, global_max
 
-params_list = [
-    ('Reno', 1, 4, 'metro'), ('Reno', 5, 1.5, 'ferry'), ('Reno', 2, 4, 'car'), ('Reno', 1.5, 4, 'tram'),
-    ('Cubic', 0.9, 0.8, 'car'), ('Cubic', 0.8, 0.4, 'train'), ('Cubic', 0.7, 0.4, 'bus'), ('Cubic', 0.5, 0.8, 'ferry'),
-    ('Reno-10x', 1, 4, 'metro'), ('Reno-10x', 5, 1.5, 'ferry'), ('Reno-10x', 2, 4, 'car'), ('Reno-10x', 1.5, 4, 'tram'),
-    ('Cubic-10x', 0.9, 0.8, 'car'), ('Cubic-10x', 0.8, 0.4, 'train'), ('Cubic-10x', 0.7, 0.4, 'bus'), ('Cubic-10x', 0.5, 0.8, 'ferry')#,
-#    ('Reno-25x', 1, 4, 'metro'), ('Reno-25x', 5, 1.5, 'ferry'), ('Reno-25x', 2, 4, 'car'), ('Reno-25x', 1.5, 4, 'tram'),
-#    ('Cubic-25x', 0.9, 0.8, 'car'), ('Cubic-25x', 0.8, 0.4, 'train'), ('Cubic-25x', 0.7, 0.4, 'bus'), ('Cubic-25x', 0.5, 0.8, 'ferry')
+# Out-of-distribution
+params_list_alt = [
+    ('Reno', 1, 2, 'ferry'), ('Reno', 5, 3, 'metro'), ('Reno', 2, 2, 'bus'), ('Reno', 1.5, 2, 'train'),
+    ('Cubic', 0.9, 0.4, 'bus'), ('Cubic', 0.7, 0.8, 'metro'), ('Cubic', 0.5, 0.4, 'car'), ('Cubic', 0.8, 0.8, 'tram'),
+    ('Reno-10x', 1, 2, 'ferry'), ('Reno-10x', 5, 3, 'metro'), ('Reno-10x', 2, 2, 'bus'), ('Reno-10x', 1.5, 2, 'train'),
+    ('Cubic-10x', 0.9, 0.4, 'bus'), ('Cubic-10x', 0.7, 0.8, 'metro'), ('Cubic-10x', 0.5, 0.4, 'car'), ('Cubic-10x', 0.8, 0.8, 'tram')#,
+#    ('Reno-25x', 1, 2, 'ferry'), ('Reno-25x', 5, 3, 'metro'), ('Reno-25x', 2, 2, 'bus'), ('Reno-25x', 1.5, 2, 'train'),
+#    ('Cubic-25x', 0.9, 0.4, 'bus'), ('Cubic-25x', 0.7, 0.8, 'metro'), ('Cubic-25x', 0.5, 0.4, 'car'), ('Cubic-25x', 0.8, 0.8, 'tram')
 ]
 
 cubic_files = '/scratch/09498/janechen/Cubic'
 reno_files = '/scratch/09498/janechen/NewReno'
-    
+
 filelist = []
 
-for pol, inc, dec, transport in params_list:
+for pol, inc, dec, transport in params_list_alt:
     if pol.startswith('Reno'): 
         path = reno_files
         if len(pol.split('-')) > 1:
             path += '-'
             path += pol.split('-')[1]
         path = os.path.join(path, 'NewReno-'+str(inc)+'-'+str(dec), transport)
-        print(path)
+        # print(path)
     else:
         path = cubic_files
         if len(pol.split('-')) > 1:
             path += '-'
             path += pol.split('-')[1]
         path = os.path.join(path, 'Cubic-'+str(inc)+'-'+str(dec), transport)
-        print(path)
+        # print(path)
     tput_list = [os.path.join(path, f) for f in os.listdir(path) if os.path.isfile(os.path.join(path, f)) and f[-4:]=='tput']
     l = [i for i in tput_list if os.path.exists(i[:-5])]
     random.shuffle(l)
@@ -133,7 +134,6 @@ for pol, inc, dec, transport in params_list:
     if len(l) < sample_length:
         sample_length = len(l)
     l = l[:sample_length]
-    #l = l[:1000]
     filelist += l
 
 data, normalizer = form_dataset_mod(filelist, CONTEXT_LENGTH, PREDICTION_LENGTH)
@@ -142,18 +142,18 @@ data_dict = dict()
 data_dict['data'] = data
 data_dict['normalizer'] = normalizer
 import pickle
-with open('/scratch/09498/janechen/NEWDatasets/FullDataset.p', 'wb') as f:
+with open('/scratch/09498/janechen/NEWDatasets/FullDataset_alt.p', 'wb') as f:
     pickle.dump(data_dict, f, pickle.HIGHEST_PROTOCOL)
 
-with open('/scratch/09498/janechen/NEWDatasets/FullDataset.p','rb') as f:
+with open('/scratch/09498/janechen/NEWDatasets/FullDataset_alt.p','rb') as f:
     dataset = pickle.load(f)
 dataset = dataset['data']
 shuffle_idx = torch.randperm(dataset.shape[0])
 dataset = dataset[shuffle_idx, :, :]
 train_samples = int(0.8*dataset.shape[0])
 
-with open('/scratch/09498/janechen/NEWDatasets/FullDataset-test.p', 'wb') as f:
+with open('/scratch/09498/janechen/NEWDatasets/FullDataset_alt-test.p', 'wb') as f:
     pickle.dump(dataset[train_samples:,:,:], f, pickle.HIGHEST_PROTOCOL)
 
-with open('/scratch/09498/janechen/NEWDatasets/FullDataset-train.p', 'wb') as f:
+with open('/scratch/09498/janechen/NEWDatasets/FullDataset_alt-train.p', 'wb') as f:
     pickle.dump(dataset[:train_samples, :,:], f, pickle.HIGHEST_PROTOCOL)
