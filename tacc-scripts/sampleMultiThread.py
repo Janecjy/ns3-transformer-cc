@@ -87,24 +87,39 @@ def form_dataset_mod(filelist, context_len, prediction_len, input_dim=13, num_th
     train_dataset = np.divide(train_dataset, global_max)
     print('Finished gathering data. Reshaping...')
     train_dataset = train_dataset[1:, :, :]
-    num_splits = 500 // seq_len
+
     mod_data = np.zeros((1, input_dim, seq_len))
-    for i in range(num_splits):
-        mod_data = np.vstack((mod_data, train_dataset[:, :, i * seq_len:(i + 1) * seq_len]))
+    N, _, total_len = train_dataset.shape  # Get dimensions of train_dataset
+
+    for sample_idx in range(N):  # Iterate through each sample in the dataset
+        remaining_length = total_len  # Initialize remaining length of the data
+        last_end = 0  # Initialize the last endpoint
+
+        while remaining_length >= seq_len:  # Continue until there is enough data for another segment
+            # Randomly select a start point after the last end point, within bounds
+            start = np.random.randint(last_end, total_len - seq_len + 1)
+            end = start + seq_len  # Determine the end point based on the sequence length
+
+            # Extract the segment and add it to mod_data
+            mod_data = np.vstack((mod_data, train_dataset[sample_idx, :, start:end]))
+
+            # Update the last end point and remaining length
+            last_end = end
+            remaining_length = total_len - last_end  # Update remaining length
+
+    # Remove the initial placeholder row and convert to torch.FloatTensor
     mod_data = mod_data[1:, :, :]
     mod_data = torch.FloatTensor(mod_data)
+    mod_data = torch.transpose(mod_data, 1, 2)  # Transpose to the required format
+
     global_max = torch.FloatTensor(global_max[0, :, 0])
-    mod_data = torch.transpose(mod_data, 1, 2)
     return mod_data, global_max
 
 params_list = [
     ('Reno', 1, 4, 'metro'), ('Reno', 5, 1.5, 'ferry'), ('Reno', 2, 4, 'car'), ('Reno', 1.5, 4, 'tram'),
     ('Cubic', 0.9, 0.8, 'car'), ('Cubic', 0.8, 0.4, 'train'), ('Cubic', 0.7, 0.4, 'bus'), ('Cubic', 0.5, 0.8, 'ferry'),
     ('Reno-10x', 1, 4, 'metro'), ('Reno-10x', 5, 1.5, 'ferry'), ('Reno-10x', 2, 4, 'car'), ('Reno-10x', 1.5, 4, 'tram'),
-    ('Cubic-10x', 0.9, 0.8, 'car'), ('Cubic-10x', 0.8, 0.4, 'train'), ('Cubic-10x', 0.7, 0.4, 'bus'), ('Cubic-10x', 0.5, 0.8, 'ferry')#,
-#    ('Reno-25x', 1, 4, 'metro'), ('Reno-25x', 5, 1.5, 'ferry'), ('Reno-25x', 2, 4, 'car'), ('Reno-25x', 1.5, 4, 'tram'),
-#    ('Cubic-25x', 0.9, 0.8, 'car'), ('Cubic-25x', 0.8, 0.4, 'train'), ('Cubic-25x', 0.7, 0.4, 'bus'), ('Cubic-25x', 0.5, 0.8, 'ferry')
-]
+    ('Cubic-10x', 0.9, 0.8, 'car'), ('Cubic-10x', 0.8, 0.4, 'train'), ('Cubic-10x', 0.7, 0.4, 'bus'), ('Cubic-10x', 0.5, 0.8, 'ferry')]
 
 cubic_files = '/scratch/09498/janechen/Cubic'
 reno_files = '/scratch/09498/janechen/NewReno'
@@ -129,7 +144,7 @@ for pol, inc, dec, transport in params_list:
     tput_list = [os.path.join(path, f) for f in os.listdir(path) if os.path.isfile(os.path.join(path, f)) and f[-4:]=='tput']
     l = [i for i in tput_list if os.path.exists(i[:-5])]
     random.shuffle(l)
-    sample_length = 5000
+    sample_length = 10000
     if len(l) < sample_length:
         sample_length = len(l)
     l = l[:sample_length]
