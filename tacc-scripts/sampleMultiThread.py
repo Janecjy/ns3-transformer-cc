@@ -5,6 +5,7 @@ import torch
 import pandas as pd
 import pickle
 import random
+import sys
 from concurrent.futures import ThreadPoolExecutor
 
 # CONSTANTS
@@ -15,6 +16,9 @@ BATCH_SIZE = 1024
 NUM_EPOCHS = 250
 CONTEXT_LENGTH = 32
 PREDICTION_LENGTH = 32
+
+sample_length = int(sys.argv[1])
+name_index = sys.argv[2]
 
 def get_tput(filename, total_time=10, interval=0.02):
     tput_arr = pd.read_table(filename, delimiter=',', header=None, engine='python')
@@ -63,7 +67,7 @@ def form_dataset_mod(filelist, context_len, prediction_len, input_dim=13, num_th
     global_max = -10 * np.ones(input_dim)
 
     def process_chunk(thread_idx):
-        print(f'Chunk {thread_idx + 1} of {num_threads}')
+        # print(f'Chunk {thread_idx + 1} of {num_threads}')
         d1 = np.zeros((1, input_dim, 500))
         max_vals = -10 * np.ones(input_dim)
         for file in filelist[thread_idx * files_per_thread:(thread_idx + 1) * files_per_thread]:
@@ -85,7 +89,7 @@ def form_dataset_mod(filelist, context_len, prediction_len, input_dim=13, num_th
     global_max = global_max[np.newaxis, :, :]
     global_max = np.repeat(global_max, train_dataset.shape[0], axis=0)
     train_dataset = np.divide(train_dataset, global_max)
-    print('Finished gathering data. Reshaping...')
+    print('Finished gathering data. Reshaping...', flush=True)
     train_dataset = train_dataset[1:, :, :]
 
     mod_data = np.zeros((1, input_dim, seq_len))
@@ -137,18 +141,18 @@ for pol, inc, dec, transport in params_list:
             path += '-'
             path += pol.split('-')[1]
         path = os.path.join(path, 'NewReno-'+str(inc)+'-'+str(dec), transport)
-        print(path)
+        # print(path)
     else:
         path = cubic_files
         if len(pol.split('-')) > 1:
             path += '-'
             path += pol.split('-')[1]
         path = os.path.join(path, 'Cubic-'+str(inc)+'-'+str(dec), transport)
-        print(path)
+        # print(path)
     tput_list = [os.path.join(path, f) for f in os.listdir(path) if os.path.isfile(os.path.join(path, f)) and f[-4:]=='tput']
     l = [i for i in tput_list if os.path.exists(i[:-5])]
     random.shuffle(l)
-    sample_length = 10000
+    # sample_length = 10000
     if len(l) < sample_length:
         sample_length = len(l)
     l = l[:sample_length]
@@ -157,22 +161,20 @@ for pol, inc, dec, transport in params_list:
 
 data, normalizer = form_dataset_mod(filelist, CONTEXT_LENGTH, PREDICTION_LENGTH)
 
-data_dict = dict()
-data_dict['data'] = data
-data_dict['normalizer'] = normalizer
+dataset = dict()
+dataset['data'] = data
+dataset['normalizer'] = normalizer
 import pickle
-with open('/scratch/09498/janechen/NEWDatasets/FullDataset.p', 'wb') as f:
-    pickle.dump(data_dict, f, pickle.HIGHEST_PROTOCOL)
+with open('/scratch/09498/janechen/NEWDatasets/FullDataset'+name_index+'.p', 'wb') as f:
+    pickle.dump(dataset, f, pickle.HIGHEST_PROTOCOL)
 
-with open('/scratch/09498/janechen/NEWDatasets/FullDataset.p','rb') as f:
-    dataset = pickle.load(f)
-dataset = dataset['data']
-shuffle_idx = torch.randperm(dataset.shape[0])
-dataset = dataset[shuffle_idx, :, :]
-train_samples = int(0.8*dataset.shape[0])
+# dataset = dataset['data']
+# shuffle_idx = torch.randperm(dataset.shape[0])
+# dataset = dataset[shuffle_idx, :, :]
+# train_samples = int(0.8*dataset.shape[0])
 
-with open('/scratch/09498/janechen/NEWDatasets/FullDataset-test.p', 'wb') as f:
-    pickle.dump(dataset[train_samples:,:,:], f, pickle.HIGHEST_PROTOCOL)
+# with open('/scratch/09498/janechen/NEWDatasets/FullDataset-test.p', 'wb') as f:
+#     pickle.dump(dataset[train_samples:,:,:], f, pickle.HIGHEST_PROTOCOL)
 
-with open('/scratch/09498/janechen/NEWDatasets/FullDataset-train.p', 'wb') as f:
-    pickle.dump(dataset[:train_samples, :,:], f, pickle.HIGHEST_PROTOCOL)
+# with open('/scratch/09498/janechen/NEWDatasets/FullDataset-train.p', 'wb') as f:
+#     pickle.dump(dataset[:train_samples, :,:], f, pickle.HIGHEST_PROTOCOL)
