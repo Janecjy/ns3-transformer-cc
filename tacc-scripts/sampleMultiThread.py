@@ -101,7 +101,13 @@ def form_dataset_mod(filelist, context_len, prediction_len, input_dim=13, num_th
             end = start + seq_len  # Determine the end point based on the sequence length
 
             # Extract the segment and add it to mod_data
-            mod_data = np.vstack((mod_data, train_dataset[sample_idx, :, start:end]))
+            segment = train_dataset[sample_idx, :, start:end]
+            segment = np.expand_dims(segment, axis=0)  # Expand dimensions to make it 3D
+            print("mod_data: ", mod_data.shape)
+            print("segment: ", segment.shape)
+
+            # Append the segment
+            mod_data = np.vstack((mod_data, segment))
 
             # Update the last end point and remaining length
             last_end = end
