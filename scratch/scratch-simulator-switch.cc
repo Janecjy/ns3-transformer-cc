@@ -180,18 +180,25 @@ ConnectTracer()
     Config::ConnectWithoutContextFailSafe(
         "/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/NextTxSequence",
         MakeCallback(&TxTracer));
+    Config::ConnectWithoutContextFailSafe(
+        "/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/TxBuffer/UnackSequence",
+        MakeCallback(&UnAckTracer));
     // Config::ConnectWithoutContext(
     //     "/NodeList/*/$ns3::TcpL4Protocol/SocketList/*/RxBuffer/ReceivedBytes",
     //     MakeCallback(&RecvTputTracer));
 }
 
 void
-ChangeBottleneckBw(std::string bw)
+ChangeBottleneckBw(std::string bw, Ptr<QueueDisc> qd)
 {
     NS_LOG_LOGIC("Changing bottleneck bandwidth to " << bw << " at "
                                                      << Simulator::Now().GetMilliSeconds() << "ms");
     Config::Set("/NodeList/2/DeviceList/1/$ns3::PointToPointNetDevice/DataRate", StringValue(bw));
     Config::Set("/NodeList/3/DeviceList/0/$ns3::PointToPointNetDevice/DataRate", StringValue(bw));
+    int bandwidth = std::stoi(bw); // Convert string to integer
+    int queueSize = static_cast<int>(std::ceil((bandwidth * 20.0) / 1000.0 / 1448.0 / 8.0));
+    qd->SetAttribute("MaxSize", QueueSizeValue(QueueSize(std::to_string(queueSize)+"p")));
+    NS_LOG_LOGIC("Queue size set to " << queueSize);
 }
 
 static Ptr<OutputStreamWrapper> nextRxStream;
@@ -413,7 +420,7 @@ main(int argc, char* argv[])
     bottleneckLink.SetChannelAttribute("Delay", StringValue(oneWayDelay));
 
     PointToPointHelper edgeLink;
-    edgeLink.SetDeviceAttribute("DataRate", StringValue("100Mbps"));
+    edgeLink.SetDeviceAttribute("DataRate", StringValue("250Mbps"));
     edgeLink.SetChannelAttribute("Delay", StringValue("0ms"));
 
     // Create NetDevice containers
@@ -459,7 +466,7 @@ main(int argc, char* argv[])
                         StringValue("ns3::NormalRandomVariable[Mean=" + offTimeMean +
                                     "|Variance=" + offTimeVar + "]"));
     source.SetAttribute("MaxBytes", UintegerValue(0));
-    source.SetAttribute("DataRate", DataRateValue(DataRate("10Mb/s")));
+    source.SetAttribute("DataRate", DataRateValue(DataRate("250Mb/s")));
     source.SetAttribute("PacketSize", UintegerValue(1448));
     ApplicationContainer sourceApps = source.Install(sender.Get(0));
     sourceApps.Start(Seconds(0.1));
@@ -512,7 +519,7 @@ main(int argc, char* argv[])
         }
         Simulator::Schedule(MilliSeconds(t - start_t - Simulator::Now().GetMilliSeconds()),
                             &ChangeBottleneckBw,
-                            std::to_string(available_bw) + "bps");
+                            std::to_string(available_bw) + "bps", qd.Get(0));
     }
 
     // TypeId firstTcpTypeId = TcpComposite::GetTypeId();
