@@ -3,8 +3,8 @@ import sys
 import random
 
 parent_dir = "/scratch/09498/janechen/"
-trace_dir = "/scratch/09498/janechen/ns3-traces/"
-exp_per_file = sys.argv[1]
+trace_dir = os.path.join(parent_dir, sys.argv[1])
+exp_per_file = sys.argv[2]
 
 def main():
     print("max_jobs=48; cur_jobs=0")
@@ -12,7 +12,7 @@ def main():
         if files:
             for file in files:
                 print("((cur_jobs >= max_jobs)) && wait -n")
-                cmd = "python /home1/09498/janechen/ns3-transformer-cc/tacc-scripts/genSwitchJobSub.py " + root + file + " " + "switch_output_avg_" + str(exp_per_file)
+                cmd = "python /home1/09498/janechen/ns3-transformer-cc/tacc-scripts/genSwitchJobSub.py " + root + file + " " + "switch_output_" + str(exp_per_file)
                 print(cmd+" & ((++cur_jobs))")
     print("wait")
 
