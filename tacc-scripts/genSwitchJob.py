@@ -12,7 +12,7 @@ def main():
         if files:
             for file in files:
                 print("((cur_jobs >= max_jobs)) && wait -n")
-                cmd = "python /home1/09498/janechen/ns3-transformer-cc/tacc-scripts/genSwitchJobSub.py " + root + file + " " + "switch_output_" + str(exp_per_file)
+                cmd = "python /home1/09498/janechen/ns3-transformer-cc/tacc-scripts/genSwitchJobSub.py " + root + '/' + file + " " + "switch_output_" + str(exp_per_file)
                 print(cmd+" & ((++cur_jobs))")
     print("wait")
 
