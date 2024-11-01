@@ -6,6 +6,7 @@ from torch.utils.data import Dataset, DataLoader
 from sklearn.preprocessing import LabelEncoder
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import random
+import pandas as pd
 import numpy as np
 import sys
 
@@ -112,41 +113,28 @@ class CustomDataset(Dataset):
         label = self.get_label(rewards)
         return state, label, rewards
     
-    def get_tput(self, file_path):
-        # Read the data from the file
-        timestamps = []
-        bytes_received = []
-
-        with open(file_path, 'r') as file:
-            for line in file:
-                timestamp, bytes = map(float, line.split(','))
-                timestamps.append(timestamp)
-                bytes_received.append(bytes)
-
-        # Convert lists to numpy arrays for easier manipulation
-        timestamps = np.array(timestamps)
-        bytes_received = np.array(bytes_received)
-
-        # Calculate the throughput every 20 milliseconds (0.02 seconds)
-        interval_ms = 20
-        max_time_ms = int(timestamps[-1] * 1000)
-        throughputs = []
-
-        for current_time_ms in range(0, max_time_ms + 1, interval_ms):
-            current_time = current_time_ms / 1000.0
-            next_time = (current_time_ms + interval_ms) / 1000.0
-            # Find the indices of the timestamps within the current interval
-            indices = np.where((timestamps >= current_time) & (timestamps < next_time))
-            if len(indices[0]) > 0:
-                # Sum the bytes received within the current interval
-                bytes_sum = np.sum(bytes_received[indices])
-                # Calculate the throughput in bytes/second and convert to Mbps
-                throughput_mbps = (bytes_sum * 8) / (0.02 * 1_000_000)
+    def get_tput(filename, total_time=4, interval=0.02):
+        tput_arr = pd.read_table(filename, delimiter=',', header=None, engine='python')
+        tput_arr = tput_arr.to_numpy(float)
+        tput = np.zeros((int(total_time/interval), 2))
+        tput_size = tput_arr.shape[0]
+        tput[:,0] = interval * np.arange(tput.shape[0])
+        curr_line, count_packets = 0, 0
+        for i in range(tput.shape[0]):
+            if curr_line == tput_size:
+                break
+            curr_time = tput[i, 0]
+            if tput_arr[curr_line, 0] > curr_time + interval:
+                continue
             else:
-                throughput_mbps = 0  # No data for this interval
-            throughputs.append((current_time, throughput_mbps))
-
-        return throughputs
+                count_packets = 0
+                while tput_arr[curr_line, 0] <= curr_time + interval:
+                    count_packets += 1
+                    curr_line += 1
+                    if curr_line == tput_size:
+                        break
+                tput[i, 1] = 1e-6 * count_packets * 1448 * 8 / interval
+        return tput
     
     def get_reward(self, file_name, reward_lines):
         parts = file_name.split('-')
