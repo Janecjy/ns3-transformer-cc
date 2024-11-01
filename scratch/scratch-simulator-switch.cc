@@ -517,9 +517,13 @@ main(int argc, char* argv[])
         {
             start_t = t;
         }
-        Simulator::Schedule(MilliSeconds(t - start_t - Simulator::Now().GetMilliSeconds()),
-                            &ChangeBottleneckBw,
-                            std::to_string(available_bw) + "bps", qd.Get(0));
+        int scheduleDelay = t - start_t - Simulator::Now().GetMilliSeconds();
+        if (scheduleDelay >= 0) {
+            Simulator::Schedule(MilliSeconds(scheduleDelay),
+                                &ChangeBottleneckBw,
+                                std::to_string(available_bw) + "bps", qd.Get(0));
+        }
+
     }
 
     // TypeId firstTcpTypeId = TcpComposite::GetTypeId();
