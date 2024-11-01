@@ -517,7 +517,7 @@ main(int argc, char* argv[])
         {
             start_t = t;
         }
-        int scheduleDelay = t - start_t - Simulator::Now().GetMilliSeconds();
+        int scheduleDelay = t - start_t;
         if (scheduleDelay >= 0) {
             Simulator::Schedule(MilliSeconds(scheduleDelay),
                                 &ChangeBottleneckBw,
