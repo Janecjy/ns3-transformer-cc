@@ -198,6 +198,50 @@ class CustomDataset(Dataset):
     def load(self, path):
         self.data, self.labels, self.label_encoder = torch.load(path)
 
+# Step 2: Define the neural network
+class SimpleNN(nn.Module):
+    def __init__(self):
+        super(SimpleNN, self).__init__()
+        self.fc1 = nn.Linear(32 * 13, 128)
+        self.fc2 = nn.Linear(128, 64)
+        self.fc3 = nn.Linear(64, len(dataset.label_encoder.classes_))  # Number of classes
+    def forward(self, x):
+        x = x.view(x.size(0), -1)  # Flatten the input (1, 32, 13) to (32*13)
+        x = torch.relu(self.fc1(x))
+        x = torch.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
+
+# Step 3: Training the model
+def train_model(train_loader, epochs=1000, learning_rate=0.001):
+    model = SimpleNN()
+    criterion = nn.CrossEntropyLoss(ignore_index=dataset.nan_token)
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    
+    for epoch in range(epochs):
+        for data, labels in train_loader:
+            optimizer.zero_grad()
+            outputs = model(data.float())
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+        print(f'Epoch {epoch+1}/{epochs}, Loss: {loss.item()}')
+    
+    return model
+
+def test_model(model, test_loader):
+    model.eval()
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for data, labels in test_loader:
+            outputs = model(data.float())
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+    
+    print(f'Accuracy on test set: {(correct/total)*100:.2f}%')
+
 # Normalizer tensor
 normalizer = [
     1.0000000e+01, 3.2800000e+02, 4.2949673e+09, 1.0000000e+00, 3.1980000e+03,
@@ -212,14 +256,26 @@ normalizer_10x = [
 ]
 
 # Directories
-trace_dir = "/scratch/09498/janechen/ns3-traces"
+trace_dir = sys.argv[1]
+# trace_dir = "/scratch/09498/janechen/ns3-traces"
 # trace_dir = "./"
 # root_dirs = ["/scratch/09498/janechen/switch_output_avg_20", "/scratch/09498/janechen/switch_output_avg_5"] # ["/scratch/09498/janechen/switch_output", "/scratch/09498/janechen/switch_output_20", "/scratch/09498/janechen/switch_output_50", "/scratch/09498/janechen/switch_output_100", "/scratch/09498/janechen/switch_output_200"]
 # root_dirs = ["./bus.ljansbakken-oslo-report.2010-09-28_1407CEST.log-132-2024-06-17_14:30:22"]
-root_dir = sys.argv[1]
+root_dir = sys.argv[2]
+scale = sys.argv[3]
 
 # Create dataset
 dataset = CustomDataset(root_dir, normalizer)
 
 # Save dataset
 dataset.save('/scratch/09498/janechen/cc-decider-dataset-'+root_dir.split('/')[-1]+'.pth')
+
+# Load dataset (if needed)
+# dataset.load('dataset.pth')
+# Train the model
+train_loader = dataset.get_train_loader(batch_size=32)
+test_loader = dataset.get_test_loader(batch_size=32)
+model = train_model(train_loader)
+test_model(model, test_loader)
+# Save the trained model
+torch.save(model.state_dict(), '/scratch/09498/janechen/cc-decider-model.pth')
