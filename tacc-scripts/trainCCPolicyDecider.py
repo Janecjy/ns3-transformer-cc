@@ -17,29 +17,33 @@ LABEL_LINE_LIMIT = 16
 
 # Step 1: Define the custom dataset
 class CustomDataset(Dataset):
-    def __init__(self, root_dir, normalizer, nan_token=-1):
+    def __init__(self, trace_dir, root_dirs, normalizer, nan_token=-1):
         self.data = []
         self.labels = []
         self.rewards = []
+        self.reward_states = []
         self.label_encoder = LabelEncoder()
         self.normalizer = torch.tensor(normalizer).view(1, 1, -1)  # Reshape to (1, 1, 13) for broadcasting
+        self.trace_dir = trace_dir
         label_list = []
 
         with ThreadPoolExecutor(max_workers=48) as executor:
             futures = []
-            for subdir, _, files in os.walk(root_dir):
-                if len(files) == 12:
-                    futures.append(executor.submit(self.process_file, subdir, nan_token))
-                else:
-                    print(f"Skipping {subdir} as it has {len(files)} files")
+            for root_dir in root_dirs:
+                for subdir, _, files in os.walk(root_dir):
+                    if len(files) == 12:
+                        futures.append(executor.submit(self.process_file, subdir, nan_token))
+                    else:
+                        print(f"Skipping {subdir} as it has {len(files)} files")
             
             for future in as_completed(futures):
                 result = future.result()
                 if result is not None:
-                    data_point, label, rewards = result
+                    data_point, label, rewards, reward_state = result
                     self.data.append(data_point)
                     label_list.append(label)
                     self.rewards.append(rewards)
+                    self.reward_states.append(reward_state)
 
         self.labels = self.label_encoder.fit_transform(label_list)
         self.nan_token = nan_token
@@ -62,6 +66,7 @@ class CustomDataset(Dataset):
     def process_file(self, root_dir, nan_token):
         saved_state = None
         rewards = {}
+        reward_state = {}
 
         for f in os.listdir(root_dir):
             if not f.endswith("-tput") and f.endswith(".log"):
@@ -106,12 +111,13 @@ class CustomDataset(Dataset):
                         else:
                             policy_name = f.split('-')[3] + '-' + f.split('-')[4] + '-' + f.split('-')[5] + '-' + str(cwnd_diff)
                             rewards[policy_name] = self.get_reward(f, reward_lines)
+                            reward_state[policy_name] = reward_lines
         
         state = torch.tensor(saved_state).view(1, 32, 13) / self.normalizer
         state[state != state] = nan_token  # Replace NaN values with nan_token
 
         label = self.get_label(rewards)
-        return state, label, rewards
+        return state, label, rewards, reward_state
     
     def get_tput(filename, total_time=4, interval=0.02):
         tput_arr = pd.read_table(filename, delimiter=',', header=None, engine='python')
@@ -139,7 +145,7 @@ class CustomDataset(Dataset):
     def get_reward(self, file_name, reward_lines):
         parts = file_name.split('-')
         extracted_part = '-'.join(parts[-5:])
-        trace_file = os.path.join(trace_dir, extracted_part)
+        trace_file = os.path.join(self.trace_dir, extracted_part)
         start_line = int(parts[-6])
         with open(trace_file, 'r') as file:
             trace_lines = file.readlines()
@@ -243,7 +249,7 @@ def test_model(model, test_loader):
     print(f'Accuracy on test set: {(correct/total)*100:.2f}%')
 
 # Normalizer tensor
-normalizer = [
+normalizer_1x = [
     1.0000000e+01, 3.2800000e+02, 4.2949673e+09, 1.0000000e+00, 3.1980000e+03,
     1.0994000e+04, 2.6100000e+02, 1.0000000e+00, 1.5000000e+01, 4.7494400e+05,
     5.9773450e+06, 5.9512810e+06, 1.7781441e+02
@@ -256,19 +262,24 @@ normalizer_10x = [
 ]
 
 # Directories
-trace_dir = sys.argv[1]
-# trace_dir = "/scratch/09498/janechen/ns3-traces"
+# trace_dir = sys.argv[1]
+trace_dir = "/scratch/09498/janechen/ns3-traces"
 # trace_dir = "./"
-# root_dirs = ["/scratch/09498/janechen/switch_output_avg_20", "/scratch/09498/janechen/switch_output_avg_5"] # ["/scratch/09498/janechen/switch_output", "/scratch/09498/janechen/switch_output_20", "/scratch/09498/janechen/switch_output_50", "/scratch/09498/janechen/switch_output_100", "/scratch/09498/janechen/switch_output_200"]
+root_dirs = ["/scratch/09498/janechen/switch_output_1x_20", "/scratch/09498/janechen/switch_output_1x_100", "/scratch/09498/janechen/switch_output_1x_10"] # ["/scratch/09498/janechen/switch_output", "/scratch/09498/janechen/switch_output_20", "/scratch/09498/janechen/switch_output_50", "/scratch/09498/janechen/switch_output_100", "/scratch/09498/janechen/switch_output_200"]
 # root_dirs = ["./bus.ljansbakken-oslo-report.2010-09-28_1407CEST.log-132-2024-06-17_14:30:22"]
-root_dir = sys.argv[2]
-scale = sys.argv[3]
+# root_dirs = sys.argv[2]
+# scale = sys.argv[3]
+scale = "1x"
+if scale == "1x":
+    normalizer = normalizer_1x
+elif scale == "10x":
+    normalizer = normalizer_10x
 
 # Create dataset
-dataset = CustomDataset(root_dir, normalizer)
+dataset = CustomDataset(trace_dir, root_dirs, normalizer)
 
 # Save dataset
-dataset.save('/scratch/09498/janechen/cc-decider-dataset-'+root_dir.split('/')[-1]+'.pth')
+dataset.save('/scratch/09498/janechen/cc-decider-dataset-'+scale+'.pth')
 
 # Load dataset (if needed)
 # dataset.load('dataset.pth')
