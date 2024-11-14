@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Array of base directories
-base_directories=("switch_output_1x_20" "switch_output_1x_100" "switch_output_10x_20" "switch_output_10x_100")
+base_directories=("switch_output_1x_20" "switch_output_1x_100" "switch_output_1x_10" "switch_output_10x_20" "switch_output_10x_100")
 
 # Loop through each base directory
 for BASE_DIR in "${base_directories[@]}"; do

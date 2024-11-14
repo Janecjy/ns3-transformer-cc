@@ -119,7 +119,7 @@ class CustomDataset(Dataset):
         label = self.get_label(rewards)
         return state, label, rewards, reward_state
     
-    def get_tput(filename, total_time=4, interval=0.02):
+    def get_tput(self, filename, total_time=4, interval=0.02):
         tput_arr = pd.read_table(filename, delimiter=',', header=None, engine='python')
         tput_arr = tput_arr.to_numpy(float)
         tput = np.zeros((int(total_time/interval), 2))
